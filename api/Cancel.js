@@ -63,7 +63,7 @@ export default async function handler(req, res) {
             ${record.fields.Personen || ""} Person(en)
           </p>
 
-          <form method="POST">
+          <form method="POST" action="/api/cancel?id=${encodeURIComponent(bookingId)}">
             <button
               type="submit"
               style="padding:14px 22px;font-size:16px;cursor:pointer;"
