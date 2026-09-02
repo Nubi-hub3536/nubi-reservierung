@@ -107,7 +107,25 @@ export async function seatsUsed(date, time) {
   return bookedSeats + blockedSeats;
 }
 
-export async function createBooking(fields) {
+export async function createBooking(b) {
+  const bookingId = crypto.randomUUID();
+
+  const fields = {
+    "Buchungsname": b.name.trim(),
+    "E-Mail": b.email.trim(),
+    "Telefon": b.phone.trim(),
+    "Datum": b.date,
+    "Uhrzeit": b.time,
+    "Personen": Number(b.people),
+    "Anlass": "Normaler Besuch",
+    "Notiz": b.note || "",
+    "Barzahlung bestätigt": true,
+    "Handyhülle geprüft": true,
+    "Sicherheits- & Materialhinweise bestätigt": true,
+    "Status": "Bestätigt",
+    "Buchungs-ID": bookingId
+  };
+
   const response = await fetch(
     `https://api.airtable.com/v0/${BASE_ID}/${BOOKINGS_TABLE}`,
     {
@@ -128,5 +146,10 @@ export async function createBooking(fields) {
     );
   }
 
-  return response.json();
+  const airtable = await response.json();
+
+  return {
+    airtable,
+    bookingId
+  };
 }
