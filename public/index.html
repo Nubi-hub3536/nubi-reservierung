@@ -251,13 +251,13 @@
 
       slotsElement.innerHTML = "";
 
-      if (!data.slots || data.slots.length === 0) {
+      if (!data.times || data.times.length === 0) {
         slotsElement.innerHTML =
           "An diesem Tag sind keine Termine verfügbar.";
         return;
       }
 
-      data.slots.forEach(slot => {
+      data.times.forEach(slot => {
         const button = document.createElement("button");
 
         button.type = "button";
