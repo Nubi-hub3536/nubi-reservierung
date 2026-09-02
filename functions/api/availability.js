@@ -72,10 +72,10 @@ export async function onRequestGet(context) {
     );
 
     const blocked = await airtableList(
-      env,
-      BLOCKED_TABLE,
-      `{Datum}='${date}'`
-    );
+  env,
+  BLOCKED_TABLE,
+  `DATETIME_FORMAT({Datum}, 'YYYY-MM-DD')='${date}'`
+);
 
     const calendlyRecords = blocked.filter(record => {
       const grund = String(record.fields.Grund || "").toLowerCase();
