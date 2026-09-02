@@ -1,60 +1,87 @@
 const BASE_ID = "appp9KaXdhwJ3H85L";
-
 const BOOKINGS_TABLE = "tblXP5bZB9nCbIYfP";
 const BLOCKED_TABLE = "tblixvX34OWlZcb38";
 const TIMES_TABLE = "tbl2qWLmxSohKekMr";
 
 const CAPACITY = 8;
-
-const weekdayNames = [
-  "Sonntag",
-  "Montag",
-  "Dienstag",
-  "Mittwoch",
-  "Donnerstag",
-  "Freitag",
-  "Samstag",
-];
+const CALENDLY_DURATION = 90;
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
     headers: {
-      "Content-Type": "application/json; charset=utf-8",
-    },
+      "Content-Type": "application/json; charset=utf-8"
+    }
   });
 }
 
-async function airtableList(env, tableId, params = {}) {
-  const url = new URL(
-    `https://api.airtable.com/v0/${BASE_ID}/${tableId}`
-  );
+async function airtableList(env, table, formula = "") {
+  let url = `https://api.airtable.com/v0/${BASE_ID}/${table}`;
 
-  for (const [key, value] of Object.entries(params)) {
-    url.searchParams.set(key, value);
+  if (formula) {
+    url += `?filterByFormula=${encodeURIComponent(formula)}`;
   }
 
   const response = await fetch(url, {
     headers: {
-      Authorization: `Bearer ${env.AIRTABLE_TOKEN}`,
-    },
+      Authorization: `Bearer ${env.AIRTABLE_TOKEN}`
+    }
   });
 
   if (!response.ok) {
-    throw new Error(await response.text());
+    throw new Error("Airtable-Abfrage fehlgeschlagen");
   }
 
   const data = await response.json();
   return data.records || [];
 }
 
+function germanWeekday(dateString) {
+  const [year, month, day] = dateString.split("-").map(Number);
+
+  const weekdays = [
+    "Sonntag",
+    "Montag",
+    "Dienstag",
+    "Mittwoch",
+    "Donnerstag",
+    "Freitag",
+    "Samstag"
+  ];
+
+  return weekdays[
+    new Date(Date.UTC(year, month - 1, day)).getUTCDay()
+  ];
+}
+
+function toMinutes(time) {
+  const [hours, minutes] = time.split(":").map(Number);
+  return hours * 60 + minutes;
+}
+
+function overlapsCalendly(time, calendlyRecords) {
+  const slotStart = toMinutes(time);
+
+  return calendlyRecords.some(record => {
+    const calendlyTime = record.fields.Uhrzeit;
+
+    if (!calendlyTime) return false;
+
+    const start = toMinutes(calendlyTime);
+    const end = start + CALENDLY_DURATION;
+
+    // Die exakte Calendly-Uhrzeit darf angezeigt werden,
+    // wenn dort noch Plätze frei sind.
+    if (slotStart === start) return false;
+
+    return slotStart > start - CALENDLY_DURATION &&
+           slotStart < end;
+  });
+}
+
 export async function onRequestGet(context) {
   try {
     const { request, env } = context;
-
-    if (!env.AIRTABLE_TOKEN) {
-      return json({ error: "AIRTABLE_TOKEN fehlt." }, 500);
-    }
 
     const url = new URL(request.url);
     const date = url.searchParams.get("date");
@@ -63,97 +90,100 @@ export async function onRequestGet(context) {
       return json({ error: "Datum fehlt." }, 400);
     }
 
-    const selectedDate = new Date(`${date}T12:00:00`);
-    const weekday = weekdayNames[selectedDate.getDay()];
-
-    if (weekday === "Sonntag") {
-      return json({
-        date,
-        weekday,
-        times: [],
-      });
+    if (!env.AIRTABLE_TOKEN) {
+      return json({ error: "AIRTABLE_TOKEN fehlt." }, 500);
     }
 
-    const timeRows = await airtableList(env, TIMES_TABLE);
+    const weekday = germanWeekday(date);
 
-    const activeTimes = timeRows
-      .filter((record) => {
-        const fields = record.fields || {};
+    // Neue Reservierungen
+    const bookings = await airtableList(
+      env,
+      BOOKINGS_TABLE,
+      `AND({Datum}='${date}',{Status}='Bestätigt')`
+    );
 
-        return (
-          fields["WochenTag"] === weekday &&
-          Number(fields["Aktiv"]) === 1 &&
-          fields["Uhrzeit"]
-        );
-      })
-      .map((record) => record.fields["Uhrzeit"])
-      .sort();
+    // Alte Calendly- und sonstige Sperren
+    const blocked = await airtableList(
+      env,
+      BLOCKED_TABLE,
+      `{Datum}='${date}'`
+    );
 
-    if (activeTimes.length === 0) {
-      return json({
-        date,
-        weekday,
-        times: [],
-      });
-    }
+    const calendlyRecords = blocked.filter(record => {
+      const grund = String(record.fields.Grund || "").toLowerCase();
+      return grund.includes("calendly");
+    });
 
-    const bookingFormula =
-      `AND({Datum}='${date}',{Status}='Bestätigt')`;
+    // Normale Zeiten, die du später am Handy ändern kannst
+    const schedule = await airtableList(
+      env,
+      TIMES_TABLE,
+      `AND({WochenTag}='${weekday}',{Aktiv}=1)`
+    );
 
-    const blockedFormula =
-      `{Datum}='${date}'`;
+    const normalTimes = schedule
+      .map(record => record.fields.Uhrzeit)
+      .filter(Boolean)
+      .filter(time => !overlapsCalendly(time, calendlyRecords));
 
-    const [bookings, blocked] = await Promise.all([
-      airtableList(env, BOOKINGS_TABLE, {
-        filterByFormula: bookingFormula,
-      }),
-      airtableList(env, BLOCKED_TABLE, {
-        filterByFormula: blockedFormula,
-      }),
-    ]);
+    // Tatsächliche alte Calendly-Uhrzeiten ebenfalls übernehmen
+    const calendlyTimes = calendlyRecords
+      .map(record => record.fields.Uhrzeit)
+      .filter(Boolean);
 
-    const result = activeTimes.map((time) => {
+    const candidateTimes = [
+      ...new Set([...normalTimes, ...calendlyTimes])
+    ].sort((a, b) => a.localeCompare(b));
+
+    const times = candidateTimes.map(time => {
       const bookedSeats = bookings
-        .filter((record) => record.fields?.["Uhrzeit"] === time)
+        .filter(record => record.fields.Uhrzeit === time)
         .reduce(
           (sum, record) =>
-            sum + Number(record.fields?.["Personen"] || 0),
+            sum + Number(record.fields.Personen || 0),
           0
         );
 
       const blockedSeats = blocked
-        .filter((record) => record.fields?.["Uhrzeit"] === time)
+        .filter(record => record.fields.Uhrzeit === time)
         .reduce(
           (sum, record) =>
             sum +
-            Number(record.fields?.["Gesperrte Plätze"] || 0),
+            Number(record.fields["Gesperrte Plätze"] || 0),
           0
         );
 
-      const used = bookedSeats + blockedSeats;
-      const remaining = Math.max(0, CAPACITY - used);
+      const used = Math.min(
+        CAPACITY,
+        bookedSeats + blockedSeats
+      );
+
+      const remaining = Math.max(
+        0,
+        CAPACITY - used
+      );
 
       return {
         time,
         capacity: CAPACITY,
         used,
         remaining,
-        available: remaining > 0,
+        available: remaining > 0
       };
     });
 
     return json({
       date,
       weekday,
-      times: result,
+      times: times.filter(slot => slot.available)
     });
+
   } catch (error) {
     console.error(error);
 
     return json(
-      {
-        error: "Verfügbarkeit konnte nicht geladen werden.",
-      },
+      { error: "Verfügbarkeit konnte nicht geladen werden." },
       500
     );
   }
