@@ -4,12 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Nubi Mainz – Platz reservieren</title>
-
   <style>
-    * {
-      box-sizing: border-box;
-    }
-
     body {
       margin: 0;
       padding: 20px;
@@ -24,7 +19,7 @@
     }
 
     .card {
-      background: white;
+      background: #fff;
       border-radius: 22px;
       padding: 24px;
       box-shadow: 0 6px 25px rgba(0,0,0,0.08);
@@ -37,15 +32,15 @@
 
     .subtitle {
       text-align: center;
-      margin-bottom: 25px;
       color: #666;
+      margin-bottom: 25px;
     }
 
     label {
       display: block;
       font-weight: bold;
-      margin-top: 17px;
-      margin-bottom: 7px;
+      margin-top: 16px;
+      margin-bottom: 6px;
     }
 
     input,
@@ -56,7 +51,7 @@
       border: 1px solid #ddd;
       border-radius: 12px;
       font-size: 16px;
-      background: white;
+      box-sizing: border-box;
     }
 
     textarea {
@@ -73,7 +68,7 @@
 
     .slot {
       border: 2px solid #eee;
-      background: white;
+      background: #fff;
       padding: 12px;
       border-radius: 14px;
       cursor: pointer;
@@ -86,18 +81,8 @@
     }
 
     .slot:disabled {
-      opacity: 0.45;
+      opacity: 0.4;
       cursor: not-allowed;
-    }
-
-    .slot strong {
-      display: block;
-      font-size: 17px;
-    }
-
-    .slot small {
-      display: block;
-      margin-top: 4px;
     }
 
     .check {
@@ -105,13 +90,12 @@
       gap: 10px;
       align-items: flex-start;
       margin-top: 18px;
-      line-height: 1.4;
     }
 
     .check input {
       width: auto;
       margin-top: 4px;
-      transform: scale(1.25);
+      transform: scale(1.2);
     }
 
     .check label {
@@ -121,19 +105,14 @@
 
     button[type="submit"] {
       width: 100%;
-      margin-top: 25px;
+      margin-top: 24px;
       padding: 15px;
       border: 0;
       border-radius: 14px;
+      background: #222;
+      color: #fff;
       font-size: 17px;
       font-weight: bold;
-      cursor: pointer;
-      background: #222;
-      color: white;
-    }
-
-    button[type="submit"]:disabled {
-      opacity: 0.5;
     }
 
     #message {
@@ -152,62 +131,30 @@
       display: block;
       background: #ffeaea;
     }
-
-    .info {
-      background: #fff3ef;
-      border-radius: 14px;
-      padding: 14px;
-      margin-bottom: 20px;
-      line-height: 1.5;
-    }
-
-    a {
-      color: inherit;
-    }
-
-    @media (max-width: 480px) {
-      body {
-        padding: 10px;
-      }
-
-      .card {
-        padding: 18px;
-      }
-    }
   </style>
 </head>
-
 <body>
 
 <div class="container">
   <div class="card">
 
     <h1>Platz reservieren 🎀</h1>
-
-    <div class="subtitle">
-      Nubi Mainz – Make it cute
-    </div>
-
-    <div class="info">
-      Mit einer Reservierung sicherst du dir eure Sitzplätze.
-      Du kannst direkt für <strong>1 bis 8 Personen</strong> reservieren.
-      Die noch verfügbaren Plätze werden automatisch angezeigt.
-    </div>
+    <div class="subtitle">Nubi Mainz – Make it cute</div>
 
     <form id="bookingForm">
 
       <label for="date">Datum *</label>
-      <input id="date" name="date" type="date" required>
+      <input id="date" type="date" required>
 
       <label>Uhrzeit *</label>
       <div id="slots" class="slots">
         Bitte zuerst ein Datum auswählen.
       </div>
 
-      <input id="time" name="time" type="hidden">
+      <input id="time" type="hidden">
 
       <label for="people">Personen *</label>
-      <select id="people" name="people" required>
+      <select id="people" required>
         <option value="">Bitte auswählen</option>
         <option value="1">1 Person</option>
         <option value="2">2 Personen</option>
@@ -220,46 +167,35 @@
       </select>
 
       <label for="name">Name *</label>
-      <input id="name" name="name" type="text" required>
+      <input id="name" type="text" required>
 
       <label for="email">E-Mail *</label>
-      <input id="email" name="email" type="email" required>
+      <input id="email" type="email" required>
 
       <label for="phone">Telefonnummer *</label>
-      <input id="phone" name="phone" type="tel" required>
+      <input id="phone" type="tel" required>
 
-      <label for="note">Notiz (optional)</label>
-      <textarea
-        id="note"
-        name="note"
-        placeholder="Falls du uns noch etwas mitteilen möchtest."
-      ></textarea>
+      <label for="note">Notiz</label>
+      <textarea id="note"></textarea>
 
       <div class="check">
         <input id="cash" type="checkbox" required>
         <label for="cash">
-          Ich habe zur Kenntnis genommen, dass bei Nubi Mainz
-          ausschließlich <strong>Barzahlung</strong> möglich ist. *
+          Ich habe zur Kenntnis genommen, dass ausschließlich Barzahlung möglich ist.
         </label>
       </div>
 
       <div class="check">
         <input id="caseChecked" type="checkbox" required>
         <label for="caseChecked">
-          Ich habe geprüft, ob mein Handymodell auf der Website aufgeführt
-          ist. Falls nicht, bringe ich meine eigene transparente Hülle mit
-          und spare 5 €. *
+          Ich habe geprüft, ob mein Handymodell aufgeführt ist.
         </label>
       </div>
 
       <div class="check">
         <input id="safety" type="checkbox" required>
         <label for="safety">
-          Ich habe die Sicherheits- &amp; Materialhinweise auf
-          <a href="https://www.nubimainz.de" target="_blank">
-            www.nubimainz.de
-          </a>
-          zur Kenntnis genommen. *
+          Ich habe die Sicherheits- & Materialhinweise zur Kenntnis genommen.
         </label>
       </div>
 
@@ -274,22 +210,13 @@
 </div>
 
 <script>
-  const form = document.getElementById("bookingForm");
   const dateInput = document.getElementById("date");
   const timeInput = document.getElementById("time");
-  const slotsElement = document.getElementById("slots");
   const peopleSelect = document.getElementById("people");
+  const slotsElement = document.getElementById("slots");
+  const form = document.getElementById("bookingForm");
   const message = document.getElementById("message");
   const submitButton = document.getElementById("submitButton");
-
-  let currentSlots = [];
-
-  const today = new Date();
-  const year = today.getFullYear();
-  const month = String(today.getMonth() + 1).padStart(2, "0");
-  const day = String(today.getDate()).padStart(2, "0");
-
-  dateInput.min = `${year}-${month}-${day}`;
 
   function showMessage(text, type) {
     message.textContent = text;
@@ -299,74 +226,6 @@
   function clearMessage() {
     message.textContent = "";
     message.className = "";
-  }
-
-  function renderSlots(slots) {
-    currentSlots = slots;
-    timeInput.value = "";
-
-    if (!slots.length) {
-      slotsElement.innerHTML =
-        "<div>An diesem Tag sind keine Termine verfügbar.</div>";
-      return;
-    }
-
-    slotsElement.innerHTML = "";
-
-    slots.forEach(slot => {
-      const button = document.createElement("button");
-
-      button.type = "button";
-      button.className = "slot";
-      button.dataset.time = slot.time;
-      button.dataset.remaining = slot.remaining;
-
-      button.innerHTML =
-        `<strong>${slot.time} Uhr</strong>
-         <small>${slot.remaining} von ${slot.capacity} Plätzen frei</small>`;
-
-      if (!slot.available) {
-        button.disabled = true;
-      }
-
-      button.addEventListener("click", () => {
-        document
-          .querySelectorAll(".slot")
-          .forEach(item => item.classList.remove("selected"));
-
-        button.classList.add("selected");
-        timeInput.value = slot.time;
-
-        updatePeopleOptions();
-      });
-
-      slotsElement.appendChild(button);
-    });
-
-    updatePeopleOptions();
-  }
-
-  function updatePeopleOptions() {
-    const selected = document.querySelector(".slot.selected");
-
-    let remaining = 8;
-
-    if (selected) {
-      remaining = Number(selected.dataset.remaining);
-    }
-
-    Array.from(peopleSelect.options).forEach(option => {
-      if (!option.value) return;
-
-      option.disabled = Number(option.value) > remaining;
-    });
-
-    if (
-      peopleSelect.value &&
-      Number(peopleSelect.value) > remaining
-    ) {
-      peopleSelect.value = "";
-    }
   }
 
   async function loadAvailability() {
@@ -387,18 +246,72 @@
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(
-          data.error || "Verfügbarkeit konnte nicht geladen werden."
-        );
+        throw new Error(data.error || "Fehler");
       }
 
-      renderSlots(data.slots || []);
+      slotsElement.innerHTML = "";
+
+      if (!data.slots || data.slots.length === 0) {
+        slotsElement.innerHTML =
+          "An diesem Tag sind keine Termine verfügbar.";
+        return;
+      }
+
+      data.slots.forEach(slot => {
+        const button = document.createElement("button");
+
+        button.type = "button";
+        button.className = "slot";
+        button.dataset.time = slot.time;
+        button.dataset.remaining = slot.remaining;
+
+        button.innerHTML =
+          `<strong>${slot.time} Uhr</strong><br>
+           <small>${slot.remaining} von ${slot.capacity} Plätzen frei</small>`;
+
+        if (!slot.available) {
+          button.disabled = true;
+        }
+
+        button.addEventListener("click", () => {
+          document
+            .querySelectorAll(".slot")
+            .forEach(item => item.classList.remove("selected"));
+
+          button.classList.add("selected");
+          timeInput.value = slot.time;
+          updatePeopleOptions();
+        });
+
+        slotsElement.appendChild(button);
+      });
 
     } catch (error) {
-      slotsElement.innerHTML =
-        "Die Verfügbarkeit konnte nicht geladen werden.";
+      showMessage(
+        "Die Verfügbarkeit konnte nicht geladen werden.",
+        "error"
+      );
+    }
+  }
 
-      showMessage(error.message, "error");
+  function updatePeopleOptions() {
+    const selected = document.querySelector(".slot.selected");
+    let remaining = 8;
+
+    if (selected) {
+      remaining = Number(selected.dataset.remaining);
+    }
+
+    Array.from(peopleSelect.options).forEach(option => {
+      if (!option.value) return;
+      option.disabled = Number(option.value) > remaining;
+    });
+
+    if (
+      peopleSelect.value &&
+      Number(peopleSelect.value) > remaining
+    ) {
+      peopleSelect.value = "";
     }
   }
 
@@ -422,13 +335,13 @@
       phone: document.getElementById("phone").value.trim(),
       note: document.getElementById("note").value.trim(),
 
-      cashConfirmed:
+      cashAccepted:
         document.getElementById("cash").checked,
 
-      caseChecked:
+      phoneChecked:
         document.getElementById("caseChecked").checked,
 
-      safetyConfirmed:
+      safetyAccepted:
         document.getElementById("safety").checked
     };
 
@@ -456,16 +369,9 @@
       timeInput.value = "";
 
       showMessage(
-        "🎀 Deine Reservierung wurde erfolgreich gespeichert. Eine Bestätigung wird per E-Mail verschickt.",
+        "🎀 Deine Reservierung wurde erfolgreich gespeichert.",
         "success"
       );
-
-      if (dateInput.value) {
-        await loadAvailability();
-      } else {
-        slotsElement.innerHTML =
-          "Bitte zuerst ein Datum auswählen.";
-      }
 
     } catch (error) {
       showMessage(error.message, "error");
