@@ -2,9 +2,7 @@ const BASE_ID = "appp9KaXdhwJ3H85L";
 const BOOKINGS_TABLE = "tblXP5bZB9nCbIYfP";
 const BLOCKED_TABLE = "tblixvX34OWlZcb38";
 const TIMES_TABLE = "tbl2qWLmxSohKekMr";
-
 const CAPACITY = 8;
-const CALENDLY_DURATION = 90;
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -54,31 +52,6 @@ function germanWeekday(dateString) {
   ];
 }
 
-function toMinutes(time) {
-  const [hours, minutes] = time.split(":").map(Number);
-  return hours * 60 + minutes;
-}
-
-function overlapsCalendly(time, calendlyRecords) {
-  const slotStart = toMinutes(time);
-
-  return calendlyRecords.some(record => {
-    const calendlyTime = record.fields.Uhrzeit;
-
-    if (!calendlyTime) return false;
-
-    const start = toMinutes(calendlyTime);
-    const end = start + CALENDLY_DURATION;
-
-    // Die exakte Calendly-Uhrzeit darf angezeigt werden,
-    // wenn dort noch Plätze frei sind.
-    if (slotStart === start) return false;
-
-    return slotStart > start - CALENDLY_DURATION &&
-           slotStart < end;
-  });
-}
-
 export async function onRequestGet(context) {
   try {
     const { request, env } = context;
@@ -90,20 +63,14 @@ export async function onRequestGet(context) {
       return json({ error: "Datum fehlt." }, 400);
     }
 
-    if (!env.AIRTABLE_TOKEN) {
-      return json({ error: "AIRTABLE_TOKEN fehlt." }, 500);
-    }
-
     const weekday = germanWeekday(date);
 
-    // Neue Reservierungen
     const bookings = await airtableList(
       env,
       BOOKINGS_TABLE,
       `AND({Datum}='${date}',{Status}='Bestätigt')`
     );
 
-    // Alte Calendly- und sonstige Sperren
     const blocked = await airtableList(
       env,
       BLOCKED_TABLE,
@@ -115,26 +82,29 @@ export async function onRequestGet(context) {
       return grund.includes("calendly");
     });
 
-    // Normale Zeiten, die du später am Handy ändern kannst
-    const schedule = await airtableList(
-      env,
-      TIMES_TABLE,
-      `AND({WochenTag}='${weekday}',{Aktiv}=1)`
-    );
+    let candidateTimes = [];
 
-    const normalTimes = schedule
-      .map(record => record.fields.Uhrzeit)
-      .filter(Boolean)
-      .filter(time => !overlapsCalendly(time, calendlyRecords));
+    if (calendlyRecords.length > 0) {
+      candidateTimes = [
+        ...new Set(
+          calendlyRecords
+            .map(record => record.fields.Uhrzeit)
+            .filter(Boolean)
+        )
+      ];
+    } else {
+      const schedule = await airtableList(
+        env,
+        TIMES_TABLE,
+        `AND({WochenTag}='${weekday}',{Aktiv}=1)`
+      );
 
-    // Tatsächliche alte Calendly-Uhrzeiten ebenfalls übernehmen
-    const calendlyTimes = calendlyRecords
-      .map(record => record.fields.Uhrzeit)
-      .filter(Boolean);
+      candidateTimes = schedule
+        .map(record => record.fields.Uhrzeit)
+        .filter(Boolean);
+    }
 
-    const candidateTimes = [
-      ...new Set([...normalTimes, ...calendlyTimes])
-    ].sort((a, b) => a.localeCompare(b));
+    candidateTimes.sort((a, b) => a.localeCompare(b));
 
     const times = candidateTimes.map(time => {
       const bookedSeats = bookings
@@ -149,8 +119,7 @@ export async function onRequestGet(context) {
         .filter(record => record.fields.Uhrzeit === time)
         .reduce(
           (sum, record) =>
-            sum +
-            Number(record.fields["Gesperrte Plätze"] || 0),
+            sum + Number(record.fields["Gesperrte Plätze"] || 0),
           0
         );
 
