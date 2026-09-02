@@ -1,6 +1,35 @@
 const BASE_ID = "appp9KaXdhwJ3H85L";
 const BOOKINGS_TABLE = "tblXP5bZB9nCbIYfP";
+const FROM = "Nubi Mainz <reservierung@nubimainz.de>";
+const OWNER_EMAIL = "nubimainz@gmail.com";
 
+async function sendEmail({ to, subject, html }) {
+  const key = process.env.RESEND_API_KEY;
+
+  if (!key) {
+    throw new Error("RESEND_API_KEY fehlt");
+  }
+
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${key}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      from: FROM,
+      to: [to],
+      subject,
+      html
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(`Resend Fehler: ${await response.text()}`);
+  }
+
+  return response.json();
+}
 export default async function handler(req, res) {
   try {
     const bookingId = String(req.query?.id || "").trim();
@@ -100,7 +129,28 @@ export default async function handler(req, res) {
       throw new Error(await updateResponse.text());
     }
 
-    return res.status(200).send(`
+   try {
+  await sendEmail({
+    to: OWNER_EMAIL,
+    subject: `Reservierung storniert - ${record.fields.Datum || ""} ${record.fields.Uhrzeit || ""} Uhr`,
+    html: `
+      <h2>Reservierung wurde storniert</h2>
+
+      <p>
+        <strong>Name:</strong> ${record.fields.Buchungsname || ""}<br>
+        <strong>E-Mail:</strong> ${record.fields["E-Mail"] || ""}<br>
+        <strong>Telefon:</strong> ${record.fields.Telefon || ""}<br>
+        <strong>Datum:</strong> ${record.fields.Datum || ""}<br>
+        <strong>Uhrzeit:</strong> ${record.fields.Uhrzeit || ""} Uhr<br>
+        <strong>Personen:</strong> ${record.fields.Personen || ""}
+      </p>
+
+      <p>Die Plätze wurden wieder freigegeben.</p>
+    `
+  });
+} catch (emailError) {
+  console.error("Storno-E-Mail konnte nicht versendet werden:", emailError);
+   } return res.status(200).send(`
       <!doctype html>
       <html lang="de">
       <head>
