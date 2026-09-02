@@ -1,0 +1,7 @@
+{
+  "rewrites": [
+    {"source": "/api/availability", "destination": "/api/availability.js"},
+    {"source": "/api/book", "destination": "/api/book.js"},
+    {"source": "/", "destination": "/public/index.html"}
+  ]
+}
