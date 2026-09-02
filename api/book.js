@@ -150,7 +150,16 @@ export default async function handler(req, res) {
               : ""
           }
 
-          <p>
+        <p>
+  Falls du deinen Termin nicht wahrnehmen kannst, kannst du deine
+  Reservierung hier stornieren:
+</p>
+
+<p>
+  <a href="https://nubi-reservierung.vercel.app/api/cancel?id=${created.bookingId}">
+    Reservierung stornieren
+  </a>
+</p>  <p>
             Wir freuen uns auf dich! ✨<br>
             <strong>Nubi Mainz</strong>
           </p>
