@@ -53,6 +53,14 @@ function germanWeekday(dateString) {
 }
 
 export async function onRequestGet(context) {
+  const cache = caches.default;
+const cacheKey = new Request(context.request.url, context.request);
+
+const cachedResponse = await cache.match(cacheKey);
+
+if (cachedResponse) {
+  return cachedResponse;
+}
   try {
     const { request, env } = context;
 
@@ -142,11 +150,19 @@ export async function onRequestGet(context) {
       };
     });
 
-    return json({
-      date,
-      weekday,
-      times: times.filter(slot => slot.available)
-    });
+    const response = json({
+  date,
+  weekday,
+  times: times.filter(slot => slot.available)
+});
+
+response.headers.set("Cache-Control", "public, max-age=60");
+
+context.waitUntil(
+  cache.put(cacheKey, response.clone())
+);
+
+return response;
 
   } catch (error) {
     console.error(error);
