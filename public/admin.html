@@ -91,17 +91,19 @@
  <label for="pin">Admin-PIN</label>
 <input type="password" id="pin" inputmode="numeric" placeholder="PIN eingeben">
   <label for="date">Datum</label>
-  <input type="date" id="date">
+  <input type="date" id="date" onchange="updateAvailability()">
 
   <label for="time">Uhrzeit</label>
-  <select id="time">
+  <select id="time" onchange="updateAvailability()">
     <option value="">Bitte auswählen</option>
     <option value="11:00">11:00 Uhr</option>
     <option value="13:00">13:00 Uhr</option>
     <option value="15:00">15:00 Uhr</option>
     <option value="17:00">17:00 Uhr</option>
   </select>
-
+<div id="availabilityInfo" style="margin-top:16px;font-weight:bold;">
+  Freie Plätze werden nach Auswahl angezeigt.
+</div>
   <label for="seats">Wie viele Plätze sperren?</label>
   <select id="seats">
     <option value="1">1 Platz</option>
@@ -136,7 +138,7 @@ async function blockSlot() {
   const time = document.getElementById("time").value;
   const seats = Number(document.getElementById("seats").value);
   const message = document.getElementById("message");
-
+const availabilityInfo = document.getElementById("availabilityInfo");
   if (!date || !time) {
     message.textContent = "Bitte Datum und Uhrzeit auswählen.";
     return;
@@ -207,6 +209,39 @@ async function blockSlot() {
     message.textContent = "✅ Termin wurde wieder freigegeben.";
   } catch (error) {
     message.textContent = "Verbindung fehlgeschlagen.";
+  }
+}
+async function updateAvailability() {
+  const date = document.getElementById("date").value;
+  const time = document.getElementById("time").value;
+  const info = document.getElementById("availabilityInfo");
+
+  if (!date || !time) {
+    info.textContent = "Freie Plätze werden nach Auswahl angezeigt.";
+    return;
+  }
+
+  info.textContent = "Verfügbarkeit wird geprüft…";
+
+  try {
+    const response = await fetch(`/api/availability?date=${date}`);
+    const data = await response.json();
+
+    if (!response.ok) {
+      info.textContent = "Verfügbarkeit konnte nicht geladen werden.";
+      return;
+    }
+
+    const slot = (data.times || []).find(item => item.time === time);
+
+    if (!slot) {
+      info.textContent = "⛔ Dieser Termin ist nicht verfügbar.";
+      return;
+    }
+
+    info.textContent = `✅ ${slot.remaining} von 8 Plätzen frei`;
+  } catch (error) {
+    info.textContent = "Verfügbarkeit konnte nicht geladen werden.";
   }
 }
 </script>
