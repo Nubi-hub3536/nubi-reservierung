@@ -222,7 +222,14 @@ if (env.RESEND_API_KEY) {
 
   emailSent = customerMail.ok;
 }
-    return json({
+    const cache = caches.default;
+const availabilityUrl =
+  new URL(`/api/availability?date=${date}`, context.request.url).toString();
+
+await cache.delete(availabilityUrl);
+          
+
+return json({
       success: true,
       bookingId,
       recordId: record.id,
@@ -231,10 +238,10 @@ if (env.RESEND_API_KEY) {
 
   } catch (error) {
     console.error(error);
-
     return json(
-      { error: "Reservierung konnte nicht verarbeitet werden." },
-      500
-    );
+  { error: "Reservierung konnte nicht verarbeitet werden." },
+  500
+);
+
   }
 }
