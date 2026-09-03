@@ -68,7 +68,11 @@ export async function onRequestPost(context) {
         return json({ error: "Termin konnte nicht freigegeben werden." }, 500);
       }
     }
+const cache = caches.default;
+const availabilityUrl =
+  new URL(`/api/availability?date=${date}`, context.request.url).toString();
 
+await cache.delete(availabilityUrl);
     return json({
       success: true,
       message: "Termin wurde wieder freigegeben."
