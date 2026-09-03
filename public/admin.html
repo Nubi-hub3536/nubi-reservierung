@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nubi – Termine verwalten</title>
+
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: Arial, sans-serif;
+      background: #fff7fb;
+      color: #333;
+    }
+
+    .box {
+      max-width: 500px;
+      margin: 20px auto;
+      background: white;
+      padding: 24px;
+      border-radius: 20px;
+      box-shadow: 0 4px 20px rgba(0,0,0,.08);
+    }
+
+    h1 {
+      text-align: center;
+      margin-top: 0;
+    }
+
+    .subtitle {
+      text-align: center;
+      margin-bottom: 25px;
+    }
+
+    label {
+      display: block;
+      font-weight: bold;
+      margin-top: 16px;
+      margin-bottom: 6px;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 14px;
+      border: 1px solid #ccc;
+      border-radius: 12px;
+      font-size: 16px;
+      background: white;
+    }
+
+    button {
+      width: 100%;
+      padding: 15px;
+      margin-top: 22px;
+      border: 0;
+      border-radius: 12px;
+      font-size: 17px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .block {
+      background: #222;
+      color: white;
+    }
+
+    #message {
+      margin-top: 18px;
+      text-align: center;
+      font-weight: bold;
+    }
+
+    .hint {
+      margin-top: 20px;
+      font-size: 14px;
+      line-height: 1.5;
+      color: #666;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="box">
+  <h1>🐻 Nubi Admin</h1>
+  <div class="subtitle">Termine schnell verwalten</div>
+
+  <label for="date">Datum</label>
+  <input type="date" id="date">
+
+  <label for="time">Uhrzeit</label>
+  <select id="time">
+    <option value="">Bitte auswählen</option>
+    <option value="11:00">11:00 Uhr</option>
+    <option value="13:00">13:00 Uhr</option>
+    <option value="15:00">15:00 Uhr</option>
+    <option value="17:00">17:00 Uhr</option>
+  </select>
+
+  <label for="seats">Wie viele Plätze sperren?</label>
+  <select id="seats">
+    <option value="1">1 Platz</option>
+    <option value="2">2 Plätze</option>
+    <option value="3">3 Plätze</option>
+    <option value="4">4 Plätze</option>
+    <option value="5">5 Plätze</option>
+    <option value="6">6 Plätze</option>
+    <option value="7">7 Plätze</option>
+    <option value="8" selected>8 Plätze – komplett sperren</option>
+  </select>
+
+  <button class="block" onclick="blockSlot()">
+    Termin / Plätze sperren
+  </button>
+
+  <div id="message"></div>
+
+  <div class="hint">
+    Beispiel: 8 Plätze sperren = Termin komplett schließen.
+    Bei 5 gesperrten Plätzen bleiben maximal 3 Plätze für Reservierungen frei.
+  </div>
+</div>
+
+<script>
+async function blockSlot() {
+  const date = document.getElementById("date").value;
+  const time = document.getElementById("time").value;
+  const seats = Number(document.getElementById("seats").value);
+  const message = document.getElementById("message");
+
+  if (!date || !time) {
+    message.textContent = "Bitte Datum und Uhrzeit auswählen.";
+    return;
+  }
+
+  message.textContent = "Wird gespeichert…";
+
+  try {
+    const response = await fetch("/api/admin-block", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        date,
+        time,
+        seats
+      })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      message.textContent =
+        data.error || "Speichern nicht möglich.";
+      return;
+    }
+
+    message.textContent = "✅ Erfolgreich gespeichert.";
+  } catch (error) {
+    message.textContent =
+      "Verbindung fehlgeschlagen.";
+  }
+}
+</script>
+
+</body>
+</html>
