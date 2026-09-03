@@ -71,7 +71,7 @@ const bereitsGebucht = checkData.records.reduce(
 const BLOCKED_TABLE = "tblixvX34OWlZcb38";
 
 const blockFormula =
-  `AND({Datum}='${date}',{Uhrzeit}='${time}')`;
+`AND(DATETIME_FORMAT({Datum}, 'YYYY-MM-DD')='${date}',{Uhrzeit}='${time}')`;
 
 const blockResponse = await fetch(
   `https://api.airtable.com/v0/${BASE_ID}/${BLOCKED_TABLE}?filterByFormula=${encodeURIComponent(blockFormula)}`,
