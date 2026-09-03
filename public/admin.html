@@ -240,6 +240,20 @@ async function updateAvailability() {
     }
 
     info.textContent = `✅ ${slot.remaining} von 8 Plätzen frei`;
+    const seatsSelect = document.getElementById("seats");
+seatsSelect.innerHTML = "";
+
+for (let i = 1; i <= slot.remaining; i++) {
+  const option = document.createElement("option");
+  option.value = i;
+  option.textContent =
+    i === slot.remaining
+      ? `${i} ${i === 1 ? "Platz" : "Plätze"} – alle freien sperren`
+      : `${i} ${i === 1 ? "Platz" : "Plätze"}`;
+  seatsSelect.appendChild(option);
+}
+
+seatsSelect.value = slot.remaining;
   } catch (error) {
     info.textContent = "Verfügbarkeit konnte nicht geladen werden.";
   }
