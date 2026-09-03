@@ -104,32 +104,22 @@ if (
   );
 }
 if (calendlyRecords.length === 0) {
-  const SCHEDULE_TABLE = "tbl2qWLmxSohKekMr";
-
   const weekday = new Date(`${date}T12:00:00`).toLocaleDateString("de-DE", {
     weekday: "long",
     timeZone: "Europe/Berlin"
   });
 
-  const scheduleFormula =
-    `AND({WochenTag}='${weekday}',{Uhrzeit}='${time}',{Aktiv}=1)`;
+  const normalTimes = {
+    Montag: ["13:00", "15:00", "17:00"],
+    Dienstag: ["13:00", "15:00", "17:00"],
+    Mittwoch: ["13:00", "15:00", "17:00"],
+    Donnerstag: ["13:00", "15:00", "17:00"],
+    Freitag: ["13:00", "15:00", "17:00"],
+    Samstag: ["11:00", "13:00", "15:00", "17:00"],
+    Sonntag: []
+  };
 
-  const scheduleResponse = await fetch(
-    `https://api.airtable.com/v0/${BASE_ID}/${SCHEDULE_TABLE}?filterByFormula=${encodeURIComponent(scheduleFormula)}`,
-    {
-      headers: {
-        Authorization: `Bearer ${env.AIRTABLE_TOKEN}`
-      }
-    }
-  );
-
-  if (!scheduleResponse.ok) {
-    return json({ error: "Termin konnte nicht geprüft werden." }, 500);
-  }
-
-  const scheduleData = await scheduleResponse.json();
-
-  if (scheduleData.records.length === 0) {
+  if (!(normalTimes[weekday] || []).includes(time)) {
     return json(
       { error: "Diese Uhrzeit ist an diesem Tag nicht verfügbar." },
       409
