@@ -156,7 +156,7 @@ if (cachedResponse) {
   times: times.filter(slot => slot.available)
 });
 
-response.headers.set("Cache-Control", "public, max-age=60");
+response.headers.set("Cache-Control", "public, max-age=600");
 
 context.waitUntil(
   cache.put(cacheKey, response.clone())
