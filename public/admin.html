@@ -88,6 +88,8 @@
   <h1>🐻 Nubi Admin</h1>
   <div class="subtitle">Termine schnell verwalten</div>
 
+ <label for="pin">Admin-PIN</label>
+<input type="password" id="pin" inputmode="numeric" placeholder="PIN eingeben">
   <label for="date">Datum</label>
   <input type="date" id="date">
 
@@ -126,6 +128,7 @@
 
 <script>
 async function blockSlot() {
+  const pin = document.getElementById("pin").value;
   const date = document.getElementById("date").value;
   const time = document.getElementById("time").value;
   const seats = Number(document.getElementById("seats").value);
@@ -145,6 +148,7 @@ async function blockSlot() {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
+        pin,
         date,
         time,
         seats
