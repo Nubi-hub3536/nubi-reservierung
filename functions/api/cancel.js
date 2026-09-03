@@ -167,7 +167,15 @@ export async function onRequestPost(context) {
     }
 
     await sendOwnerMail(env, record.fields);
+const date = record.fields.Datum;
 
+if (date) {
+  const cache = caches.default;
+  const availabilityUrl =
+    new URL(`/api/availability?date=${date}`, request.url).toString();
+
+  await cache.delete(availabilityUrl);
+}
     return html(`
       <!doctype html>
       <html lang="de">
