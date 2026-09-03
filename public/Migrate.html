@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Nubi – D1 Migration</title>
+</head>
+
+<body style="font-family:Arial;padding:30px;max-width:500px;margin:auto;">
+  <h2>Nubi – Airtable → D1</h2>
+
+  <p>Admin-PIN eingeben:</p>
+
+  <input
+    id="pin"
+    type="password"
+    inputmode="numeric"
+    placeholder="Admin-PIN"
+    style="padding:12px;width:100%;box-sizing:border-box;"
+  >
+
+  <br><br>
+
+  <button
+    onclick="migrate()"
+    style="padding:14px 20px;font-size:16px;"
+  >
+    Sperren nach D1 übertragen
+  </button>
+
+  <p id="result" style="margin-top:20px;"></p>
+
+  <script>
+    async function migrate() {
+      const result = document.getElementById("result");
+      const pin = document.getElementById("pin").value;
+
+      result.textContent = "Übertragung läuft…";
+
+      try {
+        const response = await fetch("/api/migrate-blocks", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ pin })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          result.textContent =
+            "❌ " + (data.error || "Übertragung fehlgeschlagen.");
+          return;
+        }
+
+        result.textContent =
+          `✅ Fertig! ${data.imported} Sperren übertragen. ` +
+          `${data.ignored} leere/ungültige Einträge ignoriert.`;
+
+      } catch (error) {
+        result.textContent = "❌ Übertragung fehlgeschlagen.";
+      }
+    }
+  </script>
+</body>
+</html>
