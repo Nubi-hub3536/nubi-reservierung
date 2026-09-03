@@ -117,6 +117,9 @@
   <button class="block" onclick="blockSlot()">
     Termin / Plätze sperren
   </button>
+  <button onclick="unblockSlot()">
+  Termin wieder freigeben
+  </button>
 
   <div id="message"></div>
 
@@ -167,6 +170,43 @@ async function blockSlot() {
   } catch (error) {
     message.textContent =
       "Verbindung fehlgeschlagen.";
+  }
+} async function unblockSlot() {
+  const pin = document.getElementById("pin").value;
+  const date = document.getElementById("date").value;
+  const time = document.getElementById("time").value;
+  const message = document.getElementById("message");
+
+  if (!pin || !date || !time) {
+    message.textContent = "Bitte PIN, Datum und Uhrzeit auswählen.";
+    return;
+  }
+
+  message.textContent = "Wird freigegeben…";
+
+  try {
+    const response = await fetch("/api/admin-unblock", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        pin,
+        date,
+        time
+      })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      message.textContent = data.error || "Freigeben nicht möglich.";
+      return;
+    }
+
+    message.textContent = "✅ Termin wurde wieder freigegeben.";
+  } catch (error) {
+    message.textContent = "Verbindung fehlgeschlagen.";
   }
 }
 </script>
