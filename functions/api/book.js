@@ -46,7 +46,7 @@ export async function onRequestPost(context) {
       return json({ error: "AIRTABLE_TOKEN fehlt." }, 500);
     }
 const formula =
-  `AND({Datum}='${date}',{Uhrzeit}='${time}',{Status}='Bestätigt')`;
+  `AND(DATETIME_FORMAT({Datum}, 'YYYY-MM-DD')='${date}',{Uhrzeit}='${time}',{Status}='Bestätigt')`;
 
 const checkResponse = await fetch(
   `https://api.airtable.com/v0/${BASE_ID}/${BOOKINGS_TABLE}?filterByFormula=${encodeURIComponent(formula)}`,
@@ -71,7 +71,7 @@ const bereitsGebucht = checkData.records.reduce(
 const BLOCKED_TABLE = "tblixvX34OWlZcb38";
 
 const blockFormula =
-`AND(DATETIME_FORMAT({Datum}, 'YYYY-MM-DD')='${date}',{Uhrzeit}='${time}')`;
+  `DATETIME_FORMAT({Datum}, 'YYYY-MM-DD')='${date}'`;
 
 const blockResponse = await fetch(
   `https://api.airtable.com/v0/${BASE_ID}/${BLOCKED_TABLE}?filterByFormula=${encodeURIComponent(blockFormula)}`,
@@ -88,13 +88,34 @@ if (!blockResponse.ok) {
 
 const blockData = await blockResponse.json();
 
-const gesperrt = blockData.records.reduce(
-  (sum, record) =>
-    sum + Number(record.fields["Gesperrte Plätze"] || 0),
-  0
+const calendlyRecords = blockData.records.filter(record =>
+  String(record.fields.Grund || "")
+    .toLowerCase()
+    .includes("calendly")
 );
 
-const nochFrei = Math.max(0, CAPACITY - bereitsGebucht - gesperrt);
+if (
+  calendlyRecords.length > 0 &&
+  !calendlyRecords.some(record => record.fields.Uhrzeit === time)
+) {
+  return json(
+    { error: "Diese Uhrzeit ist an diesem Tag nicht verfügbar." },
+    409
+  );
+}
+
+const gesperrt = blockData.records
+  .filter(record => record.fields.Uhrzeit === time)
+  .reduce(
+    (sum, record) =>
+      sum + Number(record.fields["Gesperrte Plätze"] || 0),
+    0
+  );
+
+const nochFrei = Math.max(
+  0,
+  CAPACITY - bereitsGebucht - gesperrt
+);
 
 if (personen > nochFrei) {
   return json(
