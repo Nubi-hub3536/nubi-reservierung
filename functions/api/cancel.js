@@ -1,6 +1,3 @@
-const BASE_ID = "appp9KaXdhwJ3H85L";
-const BOOKINGS_TABLE = "tblXP5bZB9nCbIYfP";
-
 function html(content, status = 200) {
   return new Response(content, {
     status,
@@ -22,39 +19,38 @@ async function sendOwnerMail(env, booking) {
     body: JSON.stringify({
       from: "Nubi Mainz <reservierung@nubimainz.de>",
       to: ["nubimainz@gmail.com"],
-      subject: `Reservierung storniert – ${booking.Datum} ${booking.Uhrzeit}`,
+      subject: `Reservierung storniert – ${booking.date} ${booking.time}`,
       html: `
         <h2>Reservierung storniert</h2>
-        <p><strong>Name:</strong> ${booking.Buchungsname || "-"}</p>
-        <p><strong>Datum:</strong> ${booking.Datum || "-"}</p>
-        <p><strong>Uhrzeit:</strong> ${booking.Uhrzeit || "-"}</p>
-        <p><strong>Personen:</strong> ${booking.Personen || "-"}</p>
-        <p><strong>E-Mail:</strong> ${booking["E-Mail"] || "-"}</p>
-        <p><strong>Telefon:</strong> ${booking.Telefon || "-"}</p>
+        <p><strong>Name:</strong> ${booking.name || "-"}</p>
+        <p><strong>Datum:</strong> ${booking.date || "-"}</p>
+        <p><strong>Uhrzeit:</strong> ${booking.time || "-"}</p>
+        <p><strong>Personen:</strong> ${booking.persons || "-"}</p>
+        <p><strong>E-Mail:</strong> ${booking.email || "-"}</p>
+        <p><strong>Telefon:</strong> ${booking.phone || "-"}</p>
       `
     })
   });
 }
 
 async function findBooking(env, bookingId) {
-  const formula = `{Buchungs-ID}='${bookingId}'`;
-
-  const response = await fetch(
-    `https://api.airtable.com/v0/${BASE_ID}/${BOOKINGS_TABLE}?filterByFormula=${encodeURIComponent(formula)}`,
-    {
-      headers: {
-        Authorization: `Bearer ${env.AIRTABLE_TOKEN}`
-      }
-    }
-  );
-
-  if (!response.ok) {
-    throw new Error("Airtable-Abfrage fehlgeschlagen");
-  }
-
-  const data = await response.json();
-
-  return data.records?.[0] || null;
+  return await env.DB
+    .prepare(`
+      SELECT
+        id,
+        name,
+        email,
+        phone,
+        date,
+        time,
+        persons,
+        status
+      FROM bookings
+      WHERE id = ?
+      LIMIT 1
+    `)
+    .bind(bookingId)
+    .first();
 }
 
 export async function onRequestGet(context) {
@@ -68,15 +64,13 @@ export async function onRequestGet(context) {
       return html("<h2>Ungültiger Stornierungslink.</h2>", 400);
     }
 
-    const record = await findBooking(env, bookingId);
+    const booking = await findBooking(env, bookingId);
 
-    if (!record) {
+    if (!booking) {
       return html("<h2>Reservierung nicht gefunden.</h2>", 404);
     }
 
-    const b = record.fields;
-
-    if (b.Status === "Storniert") {
+    if (booking.status === "Storniert") {
       return html(`
         <div style="font-family:Arial;max-width:600px;margin:40px auto;text-align:center">
           <h2>Diese Reservierung wurde bereits storniert.</h2>
@@ -92,32 +86,59 @@ export async function onRequestGet(context) {
           <meta name="viewport" content="width=device-width, initial-scale=1">
           <title>Reservierung stornieren</title>
         </head>
+
         <body style="font-family:Arial;background:#fff7fb;padding:20px">
-          <div style="max-width:600px;margin:30px auto;background:white;padding:24px;border-radius:16px">
+
+          <div style="
+            max-width:600px;
+            margin:30px auto;
+            background:white;
+            padding:24px;
+            border-radius:16px
+          ">
+
             <h2>Reservierung stornieren</h2>
 
-            <p><strong>Name:</strong> ${b.Buchungsname || "-"}</p>
-            <p><strong>Datum:</strong> ${b.Datum || "-"}</p>
-            <p><strong>Uhrzeit:</strong> ${b.Uhrzeit || "-"}</p>
-            <p><strong>Personen:</strong> ${b.Personen || "-"}</p>
+            <p><strong>Name:</strong> ${booking.name || "-"}</p>
+            <p><strong>Datum:</strong> ${booking.date || "-"}</p>
+            <p><strong>Uhrzeit:</strong> ${booking.time || "-"}</p>
+            <p><strong>Personen:</strong> ${booking.persons || "-"}</p>
 
             <form method="POST">
-              <input type="hidden" name="id" value="${bookingId}">
+              <input
+                type="hidden"
+                name="id"
+                value="${bookingId}"
+              >
+
               <button
                 type="submit"
-                style="padding:14px 20px;border:0;border-radius:10px;background:#222;color:white;font-size:16px"
+                style="
+                  padding:14px 20px;
+                  border:0;
+                  border-radius:10px;
+                  background:#222;
+                  color:white;
+                  font-size:16px
+                "
               >
                 Reservierung endgültig stornieren
               </button>
             </form>
+
           </div>
+
         </body>
       </html>
     `);
 
   } catch (error) {
     console.error(error);
-    return html("<h2>Fehler beim Laden der Reservierung.</h2>", 500);
+
+    return html(
+      "<h2>Fehler beim Laden der Reservierung.</h2>",
+      500
+    );
   }
 }
 
@@ -132,50 +153,36 @@ export async function onRequestPost(context) {
       return html("<h2>Ungültiger Stornierungslink.</h2>", 400);
     }
 
-    const record = await findBooking(env, bookingId);
+    const booking = await findBooking(env, bookingId);
 
-    if (!record) {
+    if (!booking) {
       return html("<h2>Reservierung nicht gefunden.</h2>", 404);
     }
 
-    if (record.fields.Status === "Storniert") {
+    if (booking.status === "Storniert") {
       return html(`
-        <div style="font-family:Arial;max-width:600px;margin:40px auto;text-align:center">
+        <div style="
+          font-family:Arial;
+          max-width:600px;
+          margin:40px auto;
+          text-align:center
+        ">
           <h2>Diese Reservierung wurde bereits storniert.</h2>
         </div>
       `);
     }
 
-    const updateResponse = await fetch(
-      `https://api.airtable.com/v0/${BASE_ID}/${BOOKINGS_TABLE}/${record.id}`,
-      {
-        method: "PATCH",
-        headers: {
-          Authorization: `Bearer ${env.AIRTABLE_TOKEN}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          fields: {
-            Status: "Storniert"
-          }
-        })
-      }
-    );
+    await env.DB
+      .prepare(`
+        UPDATE bookings
+        SET status = 'Storniert'
+        WHERE id = ?
+      `)
+      .bind(bookingId)
+      .run();
 
-    if (!updateResponse.ok) {
-      throw new Error("Stornierung konnte nicht gespeichert werden");
-    }
+    await sendOwnerMail(env, booking);
 
-    await sendOwnerMail(env, record.fields);
-const date = record.fields.Datum;
-
-if (date) {
-  const cache = caches.default;
-  const availabilityUrl =
-    new URL(`/api/availability?date=${date}`, request.url).toString();
-
-  await cache.delete(availabilityUrl);
-}
     return html(`
       <!doctype html>
       <html lang="de">
@@ -184,18 +191,44 @@ if (date) {
           <meta name="viewport" content="width=device-width, initial-scale=1">
           <title>Storniert</title>
         </head>
-        <body style="font-family:Arial;background:#fff7fb;padding:20px">
-          <div style="max-width:600px;margin:40px auto;background:white;padding:24px;border-radius:16px;text-align:center">
+
+        <body style="
+          font-family:Arial;
+          background:#fff7fb;
+          padding:20px
+        ">
+
+          <div style="
+            max-width:600px;
+            margin:40px auto;
+            background:white;
+            padding:24px;
+            border-radius:16px;
+            text-align:center
+          ">
+
             <h2>Reservierung storniert 💗</h2>
-            <p>Deine Reservierung wurde erfolgreich storniert.</p>
-            <p>Die Plätze sind wieder freigegeben.</p>
+
+            <p>
+              Deine Reservierung wurde erfolgreich storniert.
+            </p>
+
+            <p>
+              Die Plätze sind wieder freigegeben.
+            </p>
+
           </div>
+
         </body>
       </html>
     `);
 
   } catch (error) {
     console.error(error);
-    return html("<h2>Die Stornierung konnte nicht durchgeführt werden.</h2>", 500);
+
+    return html(
+      "<h2>Die Stornierung konnte nicht durchgeführt werden.</h2>",
+      500
+    );
   }
 }
