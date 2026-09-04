@@ -302,18 +302,17 @@
       remaining = Number(selected.dataset.remaining);
     }
 
-    Array.from(peopleSelect.options).forEach(option => {
-      if (!option.value) return;
-      option.disabled = Number(option.value) > remaining;
-    });
-
+Array.from(peopleSelect.options).forEach(option => {
+  if (!option.value) return;
+  option.disabled = Number(option.value) > remaining;
+});
     if (
-      peopleSelect.value &&
- persons: Number(peopleSelect.value),  > remaining
-    ) {
-      peopleSelect.value = "";
-    }
-  }
+  peopleSelect.value &&
+  Number(peopleSelect.value) > remaining
+) {
+  peopleSelect.value = "";
+}
+}
 
   dateInput.addEventListener("change", loadAvailability);
 
@@ -329,7 +328,7 @@
     const booking = {
       date: dateInput.value,
       time: timeInput.value,
-      people: Number(peopleSelect.value),
+      persons: Number(peopleSelect.value),
       name: document.getElementById("name").value.trim(),
       email: document.getElementById("email").value.trim(),
       phone: document.getElementById("phone").value.trim(),
