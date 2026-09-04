@@ -25,7 +25,10 @@ export async function onRequestGet(context) {
 
   try {
     if (!env.DB) {
-      return json({ error: "D1-Datenbank nicht verbunden." }, 500);
+      return json(
+        { error: "D1-Datenbank nicht verbunden." },
+        500
+      );
     }
 
     const url = new URL(request.url);
@@ -35,6 +38,7 @@ export async function onRequestGet(context) {
       return json({ error: "Datum fehlt." }, 400);
     }
 
+    // Alle Sperren des Tages
     const blockedResult = await env.DB
       .prepare(`
         SELECT
@@ -47,6 +51,20 @@ export async function onRequestGet(context) {
       .bind(date)
       .all();
 
+    // Alte Calendly-/Urlaubs-Sperren.
+    // Manuelle Admin-Sperren zählen hier NICHT als Tagesplan.
+    const legacyResult = await env.DB
+      .prepare(`
+        SELECT DISTINCT time
+        FROM blocked_slots
+        WHERE date = ?
+          AND reason != 'Admin – manuell gesperrt'
+        ORDER BY time
+      `)
+      .bind(date)
+      .all();
+
+    // Bestätigte Reservierungen
     const bookingResult = await env.DB
       .prepare(`
         SELECT
@@ -54,7 +72,7 @@ export async function onRequestGet(context) {
           SUM(persons) AS booked
         FROM bookings
         WHERE date = ?
-          AND status != 'Storniert'
+          AND status = 'Bestätigt'
         GROUP BY time
       `)
       .bind(date)
@@ -72,20 +90,25 @@ export async function onRequestGet(context) {
       bookedMap[row.time] = Number(row.booked || 0);
     }
 
-    const blockedTimes = Object.keys(blockedMap);
+    const legacyTimes = (legacyResult.results || [])
+      .map(row => row.time)
+      .filter(Boolean);
 
     let times = [];
 
-    if (blockedTimes.length > 0) {
-      times = blockedTimes.sort();
+    // Gibt es alte Calendly-/Urlaubszeiten,
+    // bleiben genau diese Zeiten bestehen.
+    if (legacyTimes.length > 0) {
+      times = legacyTimes;
     } else {
-      const weekday = new Date(`${date}T12:00:00`).toLocaleDateString(
-        "de-DE",
-        {
-          weekday: "long",
-          timeZone: "Europe/Berlin"
-        }
-      );
+      // Sonst normale Öffnungszeiten verwenden.
+      // Eine manuelle Admin-Sperre reduziert dann nur Plätze.
+      const weekday = new Date(
+        `${date}T12:00:00`
+      ).toLocaleDateString("de-DE", {
+        weekday: "long",
+        timeZone: "Europe/Berlin"
+      });
 
       times = NORMAL_TIMES[weekday] || [];
     }
@@ -102,20 +125,17 @@ export async function onRequestGet(context) {
 
         return {
           time,
-          remaining
+          remaining,
+          capacity: CAPACITY,
+          available: remaining > 0
         };
       })
       .filter(slot => slot.remaining > 0);
 
     return json({
-  date,
-  times: slots.map(slot => ({
-    time: slot.time,
-    remaining: slot.remaining,
-    capacity: CAPACITY,
-    available: slot.remaining > 0
-  }))
-});
+      date,
+      times: slots
+    });
 
   } catch (error) {
     console.error(error);
