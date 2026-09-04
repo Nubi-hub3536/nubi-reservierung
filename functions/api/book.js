@@ -1,269 +1,286 @@
-const BASE_ID = "appp9KaXdhwJ3H85L";
-const BOOKINGS_TABLE = "tblXP5bZB9nCbIYfP";
 const CAPACITY = 8;
+
+const NORMAL_TIMES = {
+  Montag: ["13:00", "15:00", "17:00"],
+  Dienstag: ["13:00", "15:00", "17:00"],
+  Mittwoch: ["13:00", "15:00", "17:00"],
+  Donnerstag: ["13:00", "15:00", "17:00"],
+  Freitag: ["13:00", "15:00", "17:00"],
+  Samstag: ["11:00", "13:00", "15:00", "17:00"],
+  Sonntag: []
+};
+
+const FROM = "Nubi Mainz <reservierung@nubimainz.de>";
+const OWNER_EMAIL = "nubimainz@gmail.com";
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { "Content-Type": "application/json; charset=utf-8" }
+    headers: {
+      "Content-Type": "application/json; charset=utf-8"
+    }
   });
 }
 
+async function sendEmail(env, to, subject, html) {
+  if (!env.RESEND_API_KEY) return;
+
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${env.RESEND_API_KEY}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      from: FROM,
+      to: [to],
+      subject,
+      html
+    })
+  });
+
+  if (!response.ok) {
+    console.error("E-Mail-Fehler:", await response.text());
+  }
+}
+
 export async function onRequestPost(context) {
+  const { request, env } = context;
+
   try {
-    const { request, env } = context;
+    if (!env.DB) {
+      return json({ error: "D1-Datenbank nicht verbunden." }, 500);
+    }
+
     const body = await request.json();
 
-    const {
-      date,
-      time,
-      people,
-      name,
-      email,
-      phone,
-      note
-    } = body;
+    const name = String(body.name || "").trim();
+    const email = String(body.email || "").trim();
+    const phone = String(body.phone || "").trim();
+    const date = String(body.date || "").trim();
+    const time = String(body.time || "").trim();
+    const persons = Number(body.persons);
+    const note = String(body.note || "").trim();
 
-    const personen = Number(people);
+    const cashConfirmed =
+      body.cashConfirmed === true ||
+      body.cash_confirmed === true;
+
+    const phoneChecked =
+      body.phoneChecked === true ||
+      body.phone_checked === true;
+
+    const safetyConfirmed =
+      body.safetyConfirmed === true ||
+      body.safety_confirmed === true;
 
     if (
-      !date ||
-      !time ||
       !name ||
       !email ||
-      !phone ||
-      !personen ||
-      personen < 1 ||
-      personen > CAPACITY
+      !date ||
+      !time ||
+      !Number.isInteger(persons) ||
+      persons < 1 ||
+      persons > 8
     ) {
+      return json({ error: "Bitte alle Pflichtfelder ausfüllen." }, 400);
+    }
+
+    if (!cashConfirmed || !phoneChecked || !safetyConfirmed) {
       return json(
-        { error: "Bitte alle Pflichtfelder korrekt ausfüllen." },
+        { error: "Bitte alle Pflichtbestätigungen akzeptieren." },
         400
       );
     }
 
-    if (!env.AIRTABLE_TOKEN) {
-      return json({ error: "AIRTABLE_TOKEN fehlt." }, 500);
-    }
-const formula =
-  `AND(DATETIME_FORMAT({Datum}, 'YYYY-MM-DD')='${date}',{Uhrzeit}='${time}',{Status}='Bestätigt')`;
+    const blockedResult = await env.DB
+      .prepare(`
+        SELECT COALESCE(SUM(blocked_seats), 0) AS blocked
+        FROM blocked_slots
+        WHERE date = ? AND time = ?
+      `)
+      .bind(date, time)
+      .first();
 
-const checkResponse = await fetch(
-  `https://api.airtable.com/v0/${BASE_ID}/${BOOKINGS_TABLE}?filterByFormula=${encodeURIComponent(formula)}`,
-  {
-    headers: {
-      Authorization: `Bearer ${env.AIRTABLE_TOKEN}`
-    }
-  }
-);
+    const blocked = Number(blockedResult?.blocked || 0);
 
-if (!checkResponse.ok) {
-  return json({ error: "Verfügbarkeit konnte nicht geprüft werden." }, 500);
-}
+    const calendlyDayResult = await env.DB
+      .prepare(`
+        SELECT COUNT(*) AS total
+        FROM blocked_slots
+        WHERE date = ?
+      `)
+      .bind(date)
+      .first();
 
-const checkData = await checkResponse.json();
+    const hasImportedSlots = Number(calendlyDayResult?.total || 0) > 0;
 
-const bereitsGebucht = checkData.records.reduce(
-  (sum, record) => sum + Number(record.fields.Personen || 0),
-  0
-);
+    if (hasImportedSlots) {
+      const exactSlot = await env.DB
+        .prepare(`
+          SELECT COUNT(*) AS total
+          FROM blocked_slots
+          WHERE date = ? AND time = ?
+        `)
+        .bind(date, time)
+        .first();
 
-const BLOCKED_TABLE = "tblixvX34OWlZcb38";
-
-const blockFormula =
-  `DATETIME_FORMAT({Datum}, 'YYYY-MM-DD')='${date}'`;
-
-const blockResponse = await fetch(
-  `https://api.airtable.com/v0/${BASE_ID}/${BLOCKED_TABLE}?filterByFormula=${encodeURIComponent(blockFormula)}`,
-  {
-    headers: {
-      Authorization: `Bearer ${env.AIRTABLE_TOKEN}`
-    }
-  }
-);
-
-if (!blockResponse.ok) {
-  return json({ error: "Gesperrte Plätze konnten nicht geprüft werden." }, 500);
-}
-
-const blockData = await blockResponse.json();
-
-const calendlyRecords = blockData.records.filter(record =>
-  String(record.fields.Grund || "")
-    .toLowerCase()
-    .includes("calendly")
-);
-
-if (
-  calendlyRecords.length > 0 &&
-  !calendlyRecords.some(record => record.fields.Uhrzeit === time)
-) {
-  return json(
-    { error: "Diese Uhrzeit ist an diesem Tag nicht verfügbar." },
-    409
-  );
-}
-if (calendlyRecords.length === 0) {
-  const weekday = new Date(`${date}T12:00:00`).toLocaleDateString("de-DE", {
-    weekday: "long",
-    timeZone: "Europe/Berlin"
-  });
-
-  const normalTimes = {
-    Montag: ["13:00", "15:00", "17:00"],
-    Dienstag: ["13:00", "15:00", "17:00"],
-    Mittwoch: ["13:00", "15:00", "17:00"],
-    Donnerstag: ["13:00", "15:00", "17:00"],
-    Freitag: ["13:00", "15:00", "17:00"],
-    Samstag: ["11:00", "13:00", "15:00", "17:00"],
-    Sonntag: []
-  };
-
-  if (!(normalTimes[weekday] || []).includes(time)) {
-    return json(
-      { error: "Diese Uhrzeit ist an diesem Tag nicht verfügbar." },
-      409
-    );
-  }
-}
-const gesperrt = blockData.records
-  .filter(record => record.fields.Uhrzeit === time)
-  .reduce(
-    (sum, record) =>
-      sum + Number(record.fields["Gesperrte Plätze"] || 0),
-    0
-  );
-
-const nochFrei = Math.max(
-  0,
-  CAPACITY - bereitsGebucht - gesperrt
-);
-
-if (personen > nochFrei) {
-  return json(
-    {
-      error:
-        nochFrei === 0
-          ? "Dieser Termin ist leider bereits ausgebucht."
-          : `Für diesen Termin sind nur noch ${nochFrei} Plätze frei.`
-    },
-    409
-  );
-}
-    const bookingId = crypto.randomUUID();
-
-    const airtableResponse = await fetch(
-      `https://api.airtable.com/v0/${BASE_ID}/${BOOKINGS_TABLE}`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${env.AIRTABLE_TOKEN}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          fields: {
-            "Buchungsname": name,
-            "E-Mail": email,
-            "Telefon": phone,
-            "Datum": date,
-            "Uhrzeit": time,
-            "Personen": personen,
-            "Anlass": "Normaler Besuch",
-            "Notiz": note || "",
-            "Barzahlung bestätigt": true,
-            "Handyhülle geprüft": true,
-            "Sicherheits- & Materialhinweise bestätigt": true,
-            "Status": "Bestätigt",
-            "Buchungs-ID": bookingId
-          }
-        })
+      if (Number(exactSlot?.total || 0) === 0) {
+        return json(
+          { error: "Diese Uhrzeit ist an diesem Tag nicht verfügbar." },
+          409
+        );
       }
-    );
+    } else {
+      const weekday = new Date(`${date}T12:00:00`).toLocaleDateString(
+        "de-DE",
+        {
+          weekday: "long",
+          timeZone: "Europe/Berlin"
+        }
+      );
 
-    if (!airtableResponse.ok) {
-      const errorText = await airtableResponse.text();
-      console.error(errorText);
+      if (!(NORMAL_TIMES[weekday] || []).includes(time)) {
+        return json(
+          { error: "Diese Uhrzeit ist an diesem Tag nicht verfügbar." },
+          409
+        );
+      }
+    }
 
+    const bookingResult = await env.DB
+      .prepare(`
+        SELECT COALESCE(SUM(persons), 0) AS booked
+        FROM bookings
+        WHERE date = ?
+          AND time = ?
+          AND status != 'Storniert'
+      `)
+      .bind(date, time)
+      .first();
+
+    const booked = Number(bookingResult?.booked || 0);
+    const remaining = Math.max(0, CAPACITY - blocked - booked);
+
+    if (persons > remaining) {
       return json(
-        { error: "Reservierung konnte nicht gespeichert werden." },
-        500
+        {
+          error:
+            remaining > 0
+              ? `Für diesen Termin sind nur noch ${remaining} Plätze frei.`
+              : "Dieser Termin ist bereits ausgebucht."
+        },
+        409
       );
     }
 
-    const record = await airtableResponse.json();
-let emailSent = false;
+    const id = crypto.randomUUID();
 
-if (env.RESEND_API_KEY) {
-  const cancelUrl =
-    `https://nubi-reservierung.pages.dev/api/cancel?id=${bookingId}`;
+    await env.DB
+      .prepare(`
+        INSERT INTO bookings (
+          id,
+          name,
+          email,
+          phone,
+          date,
+          time,
+          persons,
+          note,
+          cash_confirmed,
+          phone_checked,
+          safety_confirmed,
+          status
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Bestätigt')
+      `)
+      .bind(
+        id,
+        name,
+        email,
+        phone,
+        date,
+        time,
+        persons,
+        note,
+        cashConfirmed ? 1 : 0,
+        phoneChecked ? 1 : 0,
+        safetyConfirmed ? 1 : 0
+      )
+      .run();
 
-  const customerMail = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${env.RESEND_API_KEY}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      from: "Nubi Mainz <reservierung@nubimainz.de>",
-      to: [email],
-      subject: "Deine Reservierung bei Nubi Mainz 💗",
-      html: `
-        <h2>Deine Reservierung ist bestätigt 💗</h2>
-        <p><strong>Datum:</strong> ${date}</p>
-        <p><strong>Uhrzeit:</strong> ${time}</p>
-        <p><strong>Personen:</strong> ${personen}</p>
-        <p><strong>Name:</strong> ${name}</p>
-        <p>Wir freuen uns auf dich!</p>
-        <p><a href="${cancelUrl}">Reservierung stornieren</a></p>
-      `
-    })
-  });
+    const cancelUrl =
+      `https://nubi-reservierung.pages.dev/api/cancel?id=${encodeURIComponent(id)}`;
 
-  await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${env.RESEND_API_KEY}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      from: "Nubi Mainz <reservierung@nubimainz.de>",
-      to: ["nubimainz@gmail.com"],
-      subject: `Neue Reservierung – ${date} ${time}`,
-      html: `
-        <h2>Neue Reservierung</h2>
-        <p><strong>Name:</strong> ${name}</p>
-        <p><strong>Datum:</strong> ${date}</p>
-        <p><strong>Uhrzeit:</strong> ${time}</p>
-        <p><strong>Personen:</strong> ${personen}</p>
-        <p><strong>E-Mail:</strong> ${email}</p>
-        <p><strong>Telefon:</strong> ${phone}</p>
-        <p><strong>Notiz:</strong> ${note || "-"}</p>
-      `
-    })
-  });
+    const customerHtml = `
+      <h2>Deine Reservierung bei Nubi Mainz 💕</h2>
+      <p>Hallo ${name},</p>
+      <p>deine Reservierung wurde erfolgreich bestätigt.</p>
 
-  emailSent = customerMail.ok;
-}
-    const cache = caches.default;
-const availabilityUrl =
-  new URL(`/api/availability?date=${date}`, context.request.url).toString();
+      <p>
+        <strong>Datum:</strong> ${date}<br>
+        <strong>Uhrzeit:</strong> ${time} Uhr<br>
+        <strong>Personen:</strong> ${persons}
+      </p>
 
-await cache.delete(availabilityUrl);
-          
+      <p><strong>Wichtig:</strong> Bei uns ist ausschließlich Barzahlung möglich.</p>
 
-return json({
+      <p>
+        Falls du deine Reservierung nicht wahrnehmen kannst,
+        kannst du sie hier stornieren:
+      </p>
+
+      <p>
+        <a href="${cancelUrl}">Reservierung stornieren</a>
+      </p>
+
+      <p>Wir freuen uns auf dich! 💕<br>Nubi Mainz</p>
+    `;
+
+    const ownerHtml = `
+      <h2>Neue Nubi-Reservierung</h2>
+      <p>
+        <strong>Name:</strong> ${name}<br>
+        <strong>E-Mail:</strong> ${email}<br>
+        <strong>Telefon:</strong> ${phone || "-"}<br>
+        <strong>Datum:</strong> ${date}<br>
+        <strong>Uhrzeit:</strong> ${time} Uhr<br>
+        <strong>Personen:</strong> ${persons}<br>
+        <strong>Notiz:</strong> ${note || "-"}<br>
+        <strong>Buchungs-ID:</strong> ${id}
+      </p>
+    `;
+
+    await Promise.all([
+      sendEmail(
+        env,
+        email,
+        "Deine Reservierung bei Nubi Mainz 💕",
+        customerHtml
+      ),
+      sendEmail(
+        env,
+        OWNER_EMAIL,
+        `Neue Reservierung – ${date} ${time} Uhr`,
+        ownerHtml
+      )
+    ]);
+
+    return json({
       success: true,
-      bookingId,
-      recordId: record.id,
-      message: "Reservierung erfolgreich."
+      id,
+      remaining: remaining - persons
     });
 
   } catch (error) {
     console.error(error);
-    return json(
-  { error: "Reservierung konnte nicht verarbeitet werden." },
-  500
-);
 
+    return json(
+      {
+        error: "Reservierung konnte nicht gespeichert werden.",
+        details: error?.message || String(error)
+      },
+      500
+    );
   }
 }
