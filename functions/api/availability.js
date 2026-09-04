@@ -1,68 +1,32 @@
-const BASE_ID = "appp9KaXdhwJ3H85L";
-const BOOKINGS_TABLE = "tblXP5bZB9nCbIYfP";
-const BLOCKED_TABLE = "tblixvX34OWlZcb38";
-const TIMES_TABLE = "tbl2qWLmxSohKekMr";
-const CAPACITY = 8;
-
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
     headers: {
-      "Content-Type": "application/json; charset=utf-8"
+      "Content-Type": "application/json; charset=utf-8",
+      "Cache-Control": "no-store"
     }
   });
 }
 
-async function airtableList(env, table, formula = "") {
-  let url = `https://api.airtable.com/v0/${BASE_ID}/${table}`;
+const CAPACITY = 8;
 
-  if (formula) {
-    url += `?filterByFormula=${encodeURIComponent(formula)}`;
-  }
-
-  const response = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${env.AIRTABLE_TOKEN}`
-    }
-  });
-
-  if (!response.ok) {
-    throw new Error("Airtable-Abfrage fehlgeschlagen");
-  }
-
-  const data = await response.json();
-  return data.records || [];
-}
-
-function germanWeekday(dateString) {
-  const [year, month, day] = dateString.split("-").map(Number);
-
-  const weekdays = [
-    "Sonntag",
-    "Montag",
-    "Dienstag",
-    "Mittwoch",
-    "Donnerstag",
-    "Freitag",
-    "Samstag"
-  ];
-
-  return weekdays[
-    new Date(Date.UTC(year, month - 1, day)).getUTCDay()
-  ];
-}
+const NORMAL_TIMES = {
+  Montag: ["13:00", "15:00", "17:00"],
+  Dienstag: ["13:00", "15:00", "17:00"],
+  Mittwoch: ["13:00", "15:00", "17:00"],
+  Donnerstag: ["13:00", "15:00", "17:00"],
+  Freitag: ["13:00", "15:00", "17:00"],
+  Samstag: ["11:00", "13:00", "15:00", "17:00"],
+  Sonntag: []
+};
 
 export async function onRequestGet(context) {
-  const cache = caches.default;
-const cacheKey = new Request(context.request.url, context.request);
+  const { request, env } = context;
 
-const cachedResponse = await cache.match(cacheKey);
-
-if (cachedResponse) {
-  return cachedResponse;
-}
   try {
-    const { request, env } = context;
+    if (!env.DB) {
+      return json({ error: "D1-Datenbank nicht verbunden." }, 500);
+    }
 
     const url = new URL(request.url);
     const date = url.searchParams.get("date");
@@ -71,104 +35,91 @@ if (cachedResponse) {
       return json({ error: "Datum fehlt." }, 400);
     }
 
-    const weekday = germanWeekday(date);
+    const blockedResult = await env.DB
+      .prepare(`
+        SELECT
+          time,
+          SUM(blocked_seats) AS blocked
+        FROM blocked_slots
+        WHERE date = ?
+        GROUP BY time
+      `)
+      .bind(date)
+      .all();
 
-    const bookings = await airtableList(
-      env,
-      BOOKINGS_TABLE,
-      `AND({Datum}='${date}',{Status}='Bestätigt')`
-    );
+    const bookingResult = await env.DB
+      .prepare(`
+        SELECT
+          time,
+          SUM(persons) AS booked
+        FROM bookings
+        WHERE date = ?
+          AND status != 'Storniert'
+        GROUP BY time
+      `)
+      .bind(date)
+      .all();
 
-    const blocked = await airtableList(
-  env,
-  BLOCKED_TABLE,
-  `DATETIME_FORMAT({Datum}, 'YYYY-MM-DD')='${date}'`
-);
+    const blockedMap = {};
 
-    const calendlyRecords = blocked.filter(record => {
-      const grund = String(record.fields.Grund || "").toLowerCase();
-      return grund.includes("calendly");
-    });
-
-    let candidateTimes = [];
-
-    if (calendlyRecords.length > 0) {
-      candidateTimes = [
-        ...new Set(
-          calendlyRecords
-            .map(record => record.fields.Uhrzeit)
-            .filter(Boolean)
-        )
-      ];
-    } else {
-      const schedule = await airtableList(
-        env,
-        TIMES_TABLE,
-        `AND({WochenTag}='${weekday}',{Aktiv}=1)`
-      );
-
-      candidateTimes = schedule
-        .map(record => record.fields.Uhrzeit)
-        .filter(Boolean);
+    for (const row of blockedResult.results || []) {
+      blockedMap[row.time] = Number(row.blocked || 0);
     }
 
-    candidateTimes.sort((a, b) => a.localeCompare(b));
+    const bookedMap = {};
 
-    const times = candidateTimes.map(time => {
-      const bookedSeats = bookings
-        .filter(record => record.fields.Uhrzeit === time)
-        .reduce(
-          (sum, record) =>
-            sum + Number(record.fields.Personen || 0),
-          0
-        );
+    for (const row of bookingResult.results || []) {
+      bookedMap[row.time] = Number(row.booked || 0);
+    }
 
-      const blockedSeats = blocked
-        .filter(record => record.fields.Uhrzeit === time)
-        .reduce(
-          (sum, record) =>
-            sum + Number(record.fields["Gesperrte Plätze"] || 0),
-          0
-        );
+    const blockedTimes = Object.keys(blockedMap);
 
-      const used = Math.min(
-        CAPACITY,
-        bookedSeats + blockedSeats
+    let times = [];
+
+    if (blockedTimes.length > 0) {
+      times = blockedTimes.sort();
+    } else {
+      const weekday = new Date(`${date}T12:00:00`).toLocaleDateString(
+        "de-DE",
+        {
+          weekday: "long",
+          timeZone: "Europe/Berlin"
+        }
       );
 
-      const remaining = Math.max(
-        0,
-        CAPACITY - used
-      );
+      times = NORMAL_TIMES[weekday] || [];
+    }
 
-      return {
-        time,
-        capacity: CAPACITY,
-        used,
-        remaining,
-        available: remaining > 0
-      };
+    const slots = times
+      .map(time => {
+        const blocked = blockedMap[time] || 0;
+        const booked = bookedMap[time] || 0;
+
+        const remaining = Math.max(
+          0,
+          CAPACITY - blocked - booked
+        );
+
+        return {
+          time,
+          remaining
+        };
+      })
+      .filter(slot => slot.remaining > 0);
+
+    return json({
+      date,
+      slots
     });
-
-    const response = json({
-  date,
-  weekday,
-  times: times.filter(slot => slot.available)
-});
-
-response.headers.set("Cache-Control", "public, max-age=600");
-
-context.waitUntil(
-  cache.put(cacheKey, response.clone())
-);
-
-return response;
 
   } catch (error) {
     console.error(error);
 
     return json(
-      { error: "Verfügbarkeit konnte nicht geladen werden." },
+      {
+        error: "Verfügbarkeit konnte nicht geladen werden.",
+        details: error?.message || String(error)
+      },
       500
     );
   }
