@@ -97,11 +97,13 @@ export async function onRequestPost(context) {
       ignored: records.length - validRecords.length
     });
   } catch (error) {
-    console.error(error);
+  console.error(error);
 
-    return json(
-      { error: "Migration konnte nicht durchgeführt werden." },
-      500
-    );
-  }
+  return json(
+    {
+      error: "Migration konnte nicht durchgeführt werden.",
+      details: error?.message || String(error)
+    },
+    500
+  );
 }
