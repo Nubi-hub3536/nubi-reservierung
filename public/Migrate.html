@@ -50,7 +50,8 @@
 
         if (!response.ok) {
           result.textContent =
-            "❌ " + (data.error || "Übertragung fehlgeschlagen.");
+           "❌ " + (data.error || "Übertragung fehlgeschlagen.") +
+(data.details ? " – " + data.details : ""); 
           return;
         }
 
