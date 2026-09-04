@@ -1,6 +1,3 @@
-const BASE_ID = "appp9KaXdhwJ3H85L";
-const BLOCKED_TABLE = "tblixvX34OWlZcb38";
-
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
@@ -11,10 +8,10 @@ function json(data, status = 200) {
 }
 
 export async function onRequestPost(context) {
-  const env = context.env;
+  const { env, request } = context;
 
   try {
-    const body = await context.request.json();
+    const body = await request.json();
 
     const date = String(body.date || "");
     const time = String(body.time || "");
@@ -25,60 +22,51 @@ export async function onRequestPost(context) {
     }
 
     if (!date || !time) {
-      return json({ error: "Bitte Datum und Uhrzeit auswählen." }, 400);
+      return json(
+        { error: "Bitte Datum und Uhrzeit auswählen." },
+        400
+      );
     }
 
-    const formula =
-      `AND(DATETIME_FORMAT({Datum}, 'YYYY-MM-DD')='${date}',{Uhrzeit}='${time}',{Grund}='Admin – manuell gesperrt')`;
+    const existing = await env.DB
+      .prepare(`
+        SELECT id
+        FROM blocked_slots
+        WHERE date = ?
+          AND time = ?
+          AND reason = 'Admin – manuell gesperrt'
+      `)
+      .bind(date, time)
+      .all();
 
-    const check = await fetch(
-      `https://api.airtable.com/v0/${BASE_ID}/${BLOCKED_TABLE}?filterByFormula=${encodeURIComponent(formula)}`,
-      {
-        headers: {
-          Authorization: `Bearer ${env.AIRTABLE_TOKEN}`
-        }
-      }
-    );
-
-    if (!check.ok) {
-      return json({ error: "Airtable konnte nicht geprüft werden." }, 500);
-    }
-
-    const checkData = await check.json();
-
-    if (checkData.records.length === 0) {
+    if (!existing.results || existing.results.length === 0) {
       return json(
         { error: "Für diesen Termin wurde keine manuelle Sperre gefunden." },
         404
       );
     }
 
-    for (const record of checkData.records) {
-      const remove = await fetch(
-        `https://api.airtable.com/v0/${BASE_ID}/${BLOCKED_TABLE}/${record.id}`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${env.AIRTABLE_TOKEN}`
-          }
-        }
-      );
+    await env.DB
+      .prepare(`
+        DELETE FROM blocked_slots
+        WHERE date = ?
+          AND time = ?
+          AND reason = 'Admin – manuell gesperrt'
+      `)
+      .bind(date, time)
+      .run();
 
-      if (!remove.ok) {
-        return json({ error: "Termin konnte nicht freigegeben werden." }, 500);
-      }
-    }
-const cache = caches.default;
-const availabilityUrl =
-  new URL(`/api/availability?date=${date}`, context.request.url).toString();
-
-await cache.delete(availabilityUrl);
     return json({
       success: true,
       message: "Termin wurde wieder freigegeben."
     });
 
   } catch (error) {
-    return json({ error: "Es ist ein Fehler aufgetreten." }, 500);
+    console.error(error);
+
+    return json(
+      { error: "Es ist ein Fehler aufgetreten." },
+      500
+    );
   }
 }
