@@ -108,9 +108,14 @@ export async function onRequestGet(context) {
       .filter(slot => slot.remaining > 0);
 
     return json({
-      date,
-      slots
-    });
+  date,
+  times: slots.map(slot => ({
+    time: slot.time,
+    remaining: slot.remaining,
+    capacity: CAPACITY,
+    available: slot.remaining > 0
+  }))
+});
 
   } catch (error) {
     console.error(error);
