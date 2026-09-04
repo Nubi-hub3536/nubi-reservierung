@@ -22,23 +22,32 @@
   <br><br>
 
   <button
-    onclick="migrate()"
-    style="padding:14px 20px;font-size:16px;"
+    onclick="migrateBlocks()"
+    style="padding:14px 20px;font-size:16px;width:100%;"
   >
     Sperren nach D1 übertragen
+  </button>
+
+  <br><br>
+
+  <button
+    onclick="migrateBookings()"
+    style="padding:14px 20px;font-size:16px;width:100%;"
+  >
+    Reservierungen nach D1 übertragen
   </button>
 
   <p id="result" style="margin-top:20px;"></p>
 
   <script>
-    async function migrate() {
+    async function callMigration(url, successText) {
       const result = document.getElementById("result");
       const pin = document.getElementById("pin").value;
 
       result.textContent = "Übertragung läuft…";
 
       try {
-        const response = await fetch("/api/migrate-blocks", {
+        const response = await fetch(url, {
           method: "POST",
           headers: {
             "Content-Type": "application/json"
@@ -50,20 +59,34 @@
 
         if (!response.ok) {
           result.textContent =
-           "❌ " + (data.error || "Übertragung fehlgeschlagen.") +
-(data.details ? " – " + data.details : ""); 
+            "❌ " +
+            (data.error || "Übertragung fehlgeschlagen.") +
+            (data.details ? " – " + data.details : "");
           return;
         }
 
         result.textContent =
-          `✅ Fertig! ${data.imported} Sperren übertragen. ` +
+          `✅ ${successText}: ${data.imported} übertragen. ` +
           `${data.ignored} leere/ungültige Einträge ignoriert.`;
 
       } catch (error) {
         result.textContent = "❌ Übertragung fehlgeschlagen.";
       }
     }
+
+    function migrateBlocks() {
+      callMigration(
+        "/api/migrate-blocks",
+        "Sperren fertig"
+      );
+    }
+
+    function migrateBookings() {
+      callMigration(
+        "/api/migrate-bookings",
+        "Reservierungen fertig"
+      );
+    }
   </script>
 </body>
 </html>
-<!-- deploy refresh 2 -->
