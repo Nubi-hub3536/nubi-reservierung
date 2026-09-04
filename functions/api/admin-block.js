@@ -1,6 +1,3 @@
-const BASE_ID = "appp9KaXdhwJ3H85L";
-const BLOCKED_TABLE = "tblixvX34OWlZcb38";
-
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
@@ -11,10 +8,10 @@ function json(data, status = 200) {
 }
 
 export async function onRequestPost(context) {
-  const env = context.env;
+  const { env, request } = context;
 
   try {
-    const body = await context.request.json();
+    const body = await request.json();
 
     const date = String(body.date || "");
     const time = String(body.time || "");
@@ -25,83 +22,109 @@ export async function onRequestPost(context) {
       return json({ error: "Admin-PIN ist nicht korrekt." }, 401);
     }
 
-    if (!date || !time || !Number.isInteger(seats) || seats < 1 || seats > 8) {
-      return json({ error: "Bitte gültiges Datum, Uhrzeit und Plätze auswählen." }, 400);
+    if (
+      !date ||
+      !time ||
+      !Number.isInteger(seats) ||
+      seats < 1 ||
+      seats > 8
+    ) {
+      return json(
+        { error: "Bitte gültiges Datum, Uhrzeit und Plätze auswählen." },
+        400
+      );
     }
 
-    const formula =
-      `AND(DATETIME_FORMAT({Datum}, 'YYYY-MM-DD')='${date}',{Uhrzeit}='${time}',{Grund}='Admin – manuell gesperrt')`;
+    // Bereits bestätigte Reservierungen zählen
+    const bookingRow = await env.DB
+      .prepare(`
+        SELECT COALESCE(SUM(persons), 0) AS total
+        FROM bookings
+        WHERE date = ?
+          AND time = ?
+          AND status = 'Bestätigt'
+      `)
+      .bind(date, time)
+      .first();
 
-    const check = await fetch(
-      `https://api.airtable.com/v0/${BASE_ID}/${BLOCKED_TABLE}?filterByFormula=${encodeURIComponent(formula)}`,
-      {
-        headers: {
-          Authorization: `Bearer ${env.AIRTABLE_TOKEN}`
-        }
-      }
+    // Andere Sperren, z. B. alte Calendly-Termine, zählen
+    const blockedRow = await env.DB
+      .prepare(`
+        SELECT COALESCE(SUM(blocked_seats), 0) AS total
+        FROM blocked_slots
+        WHERE date = ?
+          AND time = ?
+          AND reason != 'Admin – manuell gesperrt'
+      `)
+      .bind(date, time)
+      .first();
+
+    const booked = Number(bookingRow?.total || 0);
+    const alreadyBlocked = Number(blockedRow?.total || 0);
+
+    const maximum = Math.max(
+      0,
+      8 - booked - alreadyBlocked
     );
 
-    if (!check.ok) {
-      return json({ error: "Airtable konnte nicht geprüft werden." }, 500);
+    if (seats > maximum) {
+      return json(
+        {
+          error:
+            `Es können höchstens ${maximum} Plätze zusätzlich gesperrt werden.`
+        },
+        400
+      );
     }
 
-    const checkData = await check.json();
+    // Prüfen, ob schon eine manuelle Admin-Sperre existiert
+    const existing = await env.DB
+      .prepare(`
+        SELECT id
+        FROM blocked_slots
+        WHERE date = ?
+          AND time = ?
+          AND reason = 'Admin – manuell gesperrt'
+        LIMIT 1
+      `)
+      .bind(date, time)
+      .first();
 
-    const fields = {
-      Sperre: `Admin ${date} ${time}`,
-      Datum: date,
-      Uhrzeit: time,
-      "Gesperrte Plätze": seats,
-      Grund: "Admin – manuell gesperrt"
-    };
+    if (existing) {
+      // Vorhandene Sperre ändern
+      await env.DB
+        .prepare(`
+          UPDATE blocked_slots
+          SET blocked_seats = ?
+          WHERE id = ?
+        `)
+        .bind(seats, existing.id)
+        .run();
 
-    if (checkData.records.length > 0) {
-      const recordId = checkData.records[0].id;
-
-      const update = await fetch(
-        `https://api.airtable.com/v0/${BASE_ID}/${BLOCKED_TABLE}/${recordId}`,
-        {
-          method: "PATCH",
-          headers: {
-            Authorization: `Bearer ${env.AIRTABLE_TOKEN}`,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({ fields })
-        }
-      );
-
-      if (!update.ok) {
-        return json({ error: "Sperre konnte nicht geändert werden." }, 500);
-      }
     } else {
-      const create = await fetch(
-        `https://api.airtable.com/v0/${BASE_ID}/${BLOCKED_TABLE}`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${env.AIRTABLE_TOKEN}`,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({ fields })
-        }
-      );
-
-      if (!create.ok) {
-        return json({ error: "Sperre konnte nicht gespeichert werden." }, 500);
-      }
+      // Neue Sperre erstellen
+      await env.DB
+        .prepare(`
+          INSERT INTO blocked_slots
+            (date, time, blocked_seats, reason)
+          VALUES
+            (?, ?, ?, 'Admin – manuell gesperrt')
+        `)
+        .bind(date, time, seats)
+        .run();
     }
 
- const cache = caches.default;
-const availabilityUrl =
-  new URL(`/api/availability?date=${date}`, context.request.url).toString();
-
-await cache.delete(availabilityUrl);
     return json({
       success: true,
       message: "Termin wurde gespeichert."
     });
 
   } catch (error) {
-    return json({ error: "Es ist ein Fehler aufgetreten." }, 500);
+    console.error(error);
+
+    return json(
+      { error: "Es ist ein Fehler aufgetreten." },
+      500
+    );
   }
 }
