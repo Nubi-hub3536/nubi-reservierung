@@ -1,3 +1,5 @@
+import { getRlpHoliday } from "../../lib/holidays.js";
+
 const DEFAULT_CAPACITY = 8;
 const MAX_CAPACITY = 30;
 
@@ -42,7 +44,10 @@ async function sendEmail(env, to, subject, html) {
   });
 
   if (!response.ok) {
-    console.error("E-Mail-Fehler:", await response.text());
+    console.error(
+      "E-Mail-Fehler:",
+      await response.text()
+    );
   }
 }
 
@@ -51,7 +56,10 @@ export async function onRequestPost(context) {
 
   try {
     if (!env.DB) {
-      return json({ error: "D1-Datenbank nicht verbunden." }, 500);
+      return json(
+        { error: "D1-Datenbank nicht verbunden." },
+        500
+      );
     }
 
     const body = await request.json();
@@ -86,19 +94,29 @@ export async function onRequestPost(context) {
       persons > MAX_CAPACITY
     ) {
       return json(
-        { error: "Bitte alle Pflichtfelder korrekt ausfüllen." },
+        {
+          error:
+            "Bitte alle Pflichtfelder korrekt ausfüllen."
+        },
         400
       );
     }
 
-    if (!cashConfirmed || !phoneChecked || !safetyConfirmed) {
+    if (
+      !cashConfirmed ||
+      !phoneChecked ||
+      !safetyConfirmed
+    ) {
       return json(
-        { error: "Bitte alle Pflichtbestätigungen akzeptieren." },
+        {
+          error:
+            "Bitte alle Pflichtbestätigungen akzeptieren."
+        },
         400
       );
     }
 
-    // Ganzer Tag geschlossen?
+    // Manuell komplett geschlossener Tag
     const closedDay = await env.DB
       .prepare(`
         SELECT date
@@ -111,7 +129,10 @@ export async function onRequestPost(context) {
 
     if (closedDay) {
       return json(
-        { error: "An diesem Tag sind keine Reservierungen möglich." },
+        {
+          error:
+            "An diesem Tag sind keine Reservierungen möglich."
+        },
         409
       );
     }
@@ -119,7 +140,7 @@ export async function onRequestPost(context) {
     let capacity = DEFAULT_CAPACITY;
     let slotAllowed = false;
 
-    // Gibt es für diesen Tag eigene Zeiten?
+    // Gibt es eigene Admin-Zeiten für diesen Tag?
     const customDay = await env.DB
       .prepare(`
         SELECT COUNT(*) AS total
@@ -129,7 +150,29 @@ export async function onRequestPost(context) {
       .bind(date)
       .first();
 
-    const hasCustomSlots = Number(customDay?.total || 0) > 0;
+    const hasCustomSlots =
+      Number(customDay?.total || 0) > 0;
+
+    /*
+      Feiertage in Rheinland-Pfalz sind
+      standardmäßig geschlossen.
+
+      Eigene Admin-Zeiten öffnen den Feiertag
+      ausdrücklich wieder.
+    */
+    const holiday = getRlpHoliday(date);
+
+    if (holiday && !hasCustomSlots) {
+      return json(
+        {
+          error:
+            `Am Feiertag „${holiday.name}“ sind keine Reservierungen möglich.`,
+          holiday: true,
+          holidayName: holiday.name
+        },
+        409
+      );
+    }
 
     if (hasCustomSlots) {
       const customSlot = await env.DB
@@ -148,13 +191,13 @@ export async function onRequestPost(context) {
         Number(customSlot.is_closed || 0) === 0
       ) {
         slotAllowed = true;
+
         capacity = Number(
           customSlot.capacity || DEFAULT_CAPACITY
         );
       }
     } else {
-      // Alte Calendly-/Urlaubszeiten prüfen.
-      // Reine manuelle Admin-Sperren ändern den Tagesplan nicht.
+      // Alte Calendly-/Urlaubszeiten
       const legacyDay = await env.DB
         .prepare(`
           SELECT COUNT(*) AS total
@@ -180,7 +223,9 @@ export async function onRequestPost(context) {
           .bind(date, time)
           .first();
 
-        if (Number(legacySlot?.total || 0) > 0) {
+        if (
+          Number(legacySlot?.total || 0) > 0
+        ) {
           slotAllowed = true;
           capacity = DEFAULT_CAPACITY;
         }
@@ -192,7 +237,9 @@ export async function onRequestPost(context) {
           timeZone: "Europe/Berlin"
         });
 
-        if ((NORMAL_TIMES[weekday] || []).includes(time)) {
+        if (
+          (NORMAL_TIMES[weekday] || []).includes(time)
+        ) {
           slotAllowed = true;
           capacity = DEFAULT_CAPACITY;
         }
@@ -201,7 +248,10 @@ export async function onRequestPost(context) {
 
     if (!slotAllowed) {
       return json(
-        { error: "Diese Uhrzeit ist an diesem Tag nicht verfügbar." },
+        {
+          error:
+            "Diese Uhrzeit ist an diesem Tag nicht verfügbar."
+        },
         409
       );
     }
@@ -209,7 +259,8 @@ export async function onRequestPost(context) {
     // Gesperrte Plätze
     const blockedResult = await env.DB
       .prepare(`
-        SELECT COALESCE(SUM(blocked_seats), 0) AS blocked
+        SELECT
+          COALESCE(SUM(blocked_seats), 0) AS blocked
         FROM blocked_slots
         WHERE date = ?
           AND time = ?
@@ -217,12 +268,14 @@ export async function onRequestPost(context) {
       .bind(date, time)
       .first();
 
-    const blocked = Number(blockedResult?.blocked || 0);
+    const blocked =
+      Number(blockedResult?.blocked || 0);
 
     // Bereits reservierte Plätze
     const bookingResult = await env.DB
       .prepare(`
-        SELECT COALESCE(SUM(persons), 0) AS booked
+        SELECT
+          COALESCE(SUM(persons), 0) AS booked
         FROM bookings
         WHERE date = ?
           AND time = ?
@@ -231,7 +284,8 @@ export async function onRequestPost(context) {
       .bind(date, time)
       .first();
 
-    const booked = Number(bookingResult?.booked || 0);
+    const booked =
+      Number(bookingResult?.booked || 0);
 
     const remaining = Math.max(
       0,
@@ -348,6 +402,7 @@ export async function onRequestPost(context) {
         "Deine Reservierung bei Nubi Mainz 💕",
         customerHtml
       ),
+
       sendEmail(
         env,
         OWNER_EMAIL,
@@ -368,7 +423,8 @@ export async function onRequestPost(context) {
 
     return json(
       {
-        error: "Reservierung konnte nicht gespeichert werden.",
+        error:
+          "Reservierung konnte nicht gespeichert werden.",
         details: error?.message || String(error)
       },
       500
