@@ -520,10 +520,16 @@ async function loadTimesForBlocking() {
     }
 
     if (data.closed) {
-      info.textContent =
-        "⛔ Dieser komplette Tag ist geschlossen.";
-      return;
-    }
+  if (data.holiday) {
+    info.textContent =
+      `🎉 Feiertag: ${data.holidayName} – standardmäßig geschlossen. Du kannst oben eigene Zeiten eintragen, wenn du öffnen möchtest.`;
+  } else {
+    info.textContent =
+      "⛔ Dieser komplette Tag ist geschlossen.";
+  }
+
+  return;
+}
 
     const times = data.times || [];
 
