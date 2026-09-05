@@ -129,4 +129,100 @@ export async function onRequestPost(context) {
       500
     );
   }
+} export async function onRequestDelete(context) {
+  const { request, env } = context;
+
+  try {
+    if (!env.DB) {
+      return json(
+        { error: "Datenbank nicht verbunden." },
+        500
+      );
+    }
+
+    const url = new URL(request.url);
+
+    const pin = String(
+      url.searchParams.get("pin") || ""
+    ).trim();
+
+    const startDate = String(
+      url.searchParams.get("startDate") || ""
+    ).trim();
+
+    const endDate = String(
+      url.searchParams.get("endDate") || ""
+    ).trim();
+
+    if (!env.ADMIN_PIN || pin !== env.ADMIN_PIN) {
+      return json(
+        { error: "Falsche Admin-PIN." },
+        401
+      );
+    }
+
+    if (
+      !isValidDate(startDate) ||
+      !isValidDate(endDate)
+    ) {
+      return json(
+        { error: "Start- oder Enddatum ist ungültig." },
+        400
+      );
+    }
+
+    const start = parseDate(startDate);
+    const end = parseDate(endDate);
+
+    if (start > end) {
+      return json(
+        { error: "Das Enddatum muss nach dem Startdatum liegen." },
+        400
+      );
+    }
+
+    const maxDays = 366;
+
+    const diffDays =
+      Math.floor(
+        (end.getTime() - start.getTime()) /
+        (1000 * 60 * 60 * 24)
+      ) + 1;
+
+    if (diffDays > maxDays) {
+      return json(
+        { error: "Der Zeitraum darf maximal 366 Tage lang sein." },
+        400
+      );
+    }
+
+    const result = await env.DB
+      .prepare(`
+        DELETE FROM closed_days
+        WHERE date >= ?
+          AND date <= ?
+      `)
+      .bind(
+        startDate,
+        endDate
+      )
+      .run();
+
+    return json({
+      success: true,
+      message: "Zeitraum wurde wieder geöffnet.",
+      count: result.meta?.changes || 0
+    });
+
+  } catch (error) {
+    console.error(error);
+
+    return json(
+      {
+        error: "Zeitraum konnte nicht geöffnet werden.",
+        details: error?.message || String(error)
+      },
+      500
+    );
+  }
 }
