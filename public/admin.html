@@ -217,7 +217,7 @@
     </button>
 
     <div id="dayMessage" class="message"></div>
-  </div>
+  </div> 
 
   <div class="card">
     <h2>🗓 Eigene Zeiten für diesen Tag</h2>
@@ -226,8 +226,40 @@
       Hier kannst du für einen bestimmten Tag andere Uhrzeiten
       und eine andere Personenanzahl festlegen.
       Beispiel: 14:00 Uhr mit 12 Plätzen.
+    </div> 
+  <div class="card">
+    <h2>🏖 Urlaubszeitraum schließen</h2>
+
+    <div class="small-text">
+      Hier kannst du mehrere Tage auf einmal schließen,
+      zum Beispiel für Urlaub oder Betriebsferien.
     </div>
 
+    <label for="rangeStart">Von</label>
+    <input
+      type="date"
+      id="rangeStart"
+    >
+
+    <label for="rangeEnd">Bis einschließlich</label>
+    <input
+      type="date"
+      id="rangeEnd"
+    >
+
+    <label for="rangeReason">Grund (optional)</label>
+    <input
+      type="text"
+      id="rangeReason"
+      placeholder="z. B. Urlaub"
+    >
+
+    <button class="danger" onclick="closeDateRange()">
+      🏖 Zeitraum schließen
+    </button>
+
+    <div id="rangeMessage" class="message"></div>
+  </div>
     <div id="customSlots"></div>
 
     <button class="light" onclick="addSlotRow()">
