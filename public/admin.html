@@ -193,7 +193,31 @@
       Bitte zuerst ein Datum auswählen.
     </div>
   </div>
+  <div class="card">
+    <h2>🚪 Ganzen Tag schließen</h2>
 
+    <div class="small-text">
+      Hier kannst du den ausgewählten Tag komplett schließen,
+      zum Beispiel bei Urlaub, Krankheit oder Sonderfällen.
+    </div>
+
+    <label for="closeReason">Grund (optional)</label>
+    <input
+      type="text"
+      id="closeReason"
+      placeholder="z. B. Urlaub"
+    >
+
+    <button class="danger" onclick="closeWholeDay()">
+      ⛔ Tag komplett schließen
+    </button>
+
+    <button class="light" onclick="openWholeDay()">
+      ✅ Tag wieder öffnen
+    </button>
+
+    <div id="dayMessage" class="message"></div>
+  </div>
 
   <div class="card">
     <h2>🗓 Eigene Zeiten für diesen Tag</h2>
@@ -252,7 +276,114 @@
 
 </div>
 
+async function closeWholeDay() {
+  const pin = getPin();
+  const date = getDate();
+  const reason =
+    document.getElementById("closeReason").value.trim();
 
+  const message =
+    document.getElementById("dayMessage");
+
+  if (!pin) {
+    message.textContent = "Bitte Admin-PIN eingeben.";
+    return;
+  }
+
+  if (!date) {
+    message.textContent = "Bitte Datum auswählen.";
+    return;
+  }
+
+  const confirmed = confirm(
+    "Diesen Tag wirklich komplett schließen?"
+  );
+
+  if (!confirmed) return;
+
+  message.textContent = "Wird geschlossen…";
+
+  try {
+    const response = await fetch("/api/admin-day", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        pin,
+        date,
+        reason
+      })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      message.textContent =
+        data.error || "Schließen nicht möglich.";
+      return;
+    }
+
+    message.textContent =
+      "✅ Dieser Tag ist jetzt komplett geschlossen.";
+
+    await loadTimesForBlocking();
+
+  } catch (error) {
+    message.textContent = "Verbindung fehlgeschlagen.";
+  }
+}
+
+async function openWholeDay() {
+  const pin = getPin();
+  const date = getDate();
+
+  const message =
+    document.getElementById("dayMessage");
+
+  if (!pin) {
+    message.textContent = "Bitte Admin-PIN eingeben.";
+    return;
+  }
+
+  if (!date) {
+    message.textContent = "Bitte Datum auswählen.";
+    return;
+  }
+
+  const confirmed = confirm(
+    "Diesen Tag wieder öffnen?"
+  );
+
+  if (!confirmed) return;
+
+  message.textContent = "Wird geöffnet…";
+
+  try {
+    const response = await fetch(
+      `/api/admin-day?pin=${encodeURIComponent(pin)}&date=${encodeURIComponent(date)}`,
+      {
+        method: "DELETE"
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      message.textContent =
+        data.error || "Öffnen nicht möglich.";
+      return;
+    }
+
+    message.textContent =
+      "✅ Der Tag ist wieder geöffnet.";
+
+    await loadTimesForBlocking();
+
+  } catch (error) {
+    message.textContent = "Verbindung fehlgeschlagen.";
+  }
+}
 <script>
 const DEFAULT_TIMES = {
   0: [],
