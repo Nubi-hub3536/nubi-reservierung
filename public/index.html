@@ -4,54 +4,125 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Nubi Mainz – Platz reservieren</title>
+
   <style>
+    * {
+      box-sizing: border-box;
+    }
+
     body {
       margin: 0;
-      padding: 20px;
+      padding: 22px 14px 40px;
       font-family: Arial, sans-serif;
-      background: #fff8f6;
-      color: #333;
+      color: #4d3565;
+      background:
+        radial-gradient(circle at 15% 10%, #ffd9ec 0 8%, transparent 9%),
+        radial-gradient(circle at 90% 18%, #d9c9ff 0 8%, transparent 9%),
+        linear-gradient(180deg, #f8e8ff 0%, #fff1f7 45%, #eef6ff 100%);
+      min-height: 100vh;
     }
 
     .container {
-      max-width: 650px;
+      max-width: 680px;
       margin: 0 auto;
     }
 
+    .brand {
+      text-align: center;
+      margin-bottom: 18px;
+    }
+
+    .logo {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      font-size: 54px;
+      font-weight: 900;
+      letter-spacing: -5px;
+      line-height: 1;
+      text-shadow:
+        0 3px 0 #fff,
+        0 5px 12px rgba(102, 61, 147, 0.18);
+    }
+
+    .n1 { color: #ff75b7; }
+    .u  { color: #65c7f3; }
+    .b  { color: #a984ef; }
+    .i  { color: #ff8bc4; }
+
+    .star {
+      display: inline-block;
+      margin-left: 4px;
+      color: #ffd44d;
+      font-size: 28px;
+      transform: translateY(-22px) rotate(10deg);
+      text-shadow: 0 2px 0 #fff;
+    }
+
+    .tagline {
+      margin-top: 8px;
+      font-weight: 700;
+      color: #9465c5;
+      letter-spacing: .4px;
+    }
+
     .card {
-      background: #fff;
+      background: rgba(255,255,255,0.94);
+      border: 3px solid #f5c9e5;
+      border-radius: 28px;
+      padding: 24px 20px;
+      box-shadow:
+        0 12px 35px rgba(154, 112, 193, 0.16),
+        inset 0 0 0 3px #fff;
+    }
+
+    .title-box {
+      text-align: center;
+      margin-bottom: 24px;
+      padding: 18px 12px;
       border-radius: 22px;
-      padding: 24px;
-      box-shadow: 0 6px 25px rgba(0,0,0,0.08);
+      background: linear-gradient(135deg, #ffe1ef, #eee2ff);
+      border: 2px dashed #e6a9d2;
     }
 
     h1 {
-      text-align: center;
-      margin-bottom: 5px;
+      margin: 0 0 6px;
+      color: #d64c9f;
+      font-size: 30px;
     }
 
     .subtitle {
-      text-align: center;
-      color: #666;
-      margin-bottom: 25px;
+      color: #76549a;
+      font-weight: 700;
     }
 
     label {
       display: block;
-      font-weight: bold;
-      margin-top: 16px;
-      margin-bottom: 6px;
+      font-weight: 700;
+      margin-top: 17px;
+      margin-bottom: 7px;
+      color: #674a86;
     }
 
     input,
     select,
     textarea {
       width: 100%;
-      padding: 13px;
-      border: 1px solid #ddd;
-      border-radius: 12px;
+      padding: 14px;
+      border: 2px solid #ead7f4;
+      border-radius: 15px;
       font-size: 16px;
-      box-sizing: border-box;
+      background: #fff;
+      color: #43334f;
+      outline: none;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      border-color: #d88ec1;
+      box-shadow: 0 0 0 4px rgba(216,142,193,.14);
     }
 
     textarea {
@@ -62,84 +133,154 @@
     .slots {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
-      gap: 10px;
+      gap: 11px;
       margin-top: 10px;
     }
 
     .slot {
-      border: 2px solid #eee;
-      background: #fff;
-      padding: 12px;
-      border-radius: 14px;
+      border: 2px solid #e5d4f2;
+      background: linear-gradient(180deg, #fff, #fff5fb);
+      padding: 13px 8px;
+      border-radius: 16px;
       cursor: pointer;
       text-align: center;
+      color: #694a88;
+      font-size: 15px;
+    }
+
+    .slot strong {
+      color: #d54a9d;
+      font-size: 17px;
     }
 
     .slot.selected {
-      border-color: #333;
-      background: #fff0ec;
+      border-color: #a678df;
+      background: linear-gradient(135deg, #ffdff0, #e9ddff);
+      box-shadow: 0 4px 14px rgba(166,120,223,.18);
     }
 
     .slot:disabled {
-      opacity: 0.4;
+      opacity: 0.42;
       cursor: not-allowed;
     }
 
     .check {
       display: flex;
-      gap: 10px;
+      gap: 11px;
       align-items: flex-start;
-      margin-top: 18px;
+      margin-top: 19px;
+      padding: 13px;
+      border-radius: 15px;
+      background: #fff8fc;
+      border: 1px solid #f3d8e9;
     }
 
     .check input {
       width: auto;
       margin-top: 4px;
-      transform: scale(1.2);
+      transform: scale(1.25);
+      accent-color: #d950a2;
     }
 
     .check label {
       margin: 0;
       font-weight: normal;
+      color: #574566;
+      line-height: 1.45;
+    }
+
+    a {
+      color: #b353c8;
+      font-weight: 700;
     }
 
     button[type="submit"] {
       width: 100%;
-      margin-top: 24px;
-      padding: 15px;
+      margin-top: 26px;
+      padding: 16px;
       border: 0;
-      border-radius: 14px;
-      background: #222;
+      border-radius: 18px;
+      background: linear-gradient(90deg, #ef67ad, #a978e8, #65bdf1);
       color: #fff;
-      font-size: 17px;
-      font-weight: bold;
+      font-size: 18px;
+      font-weight: 800;
+      box-shadow: 0 8px 18px rgba(171, 103, 200, .25);
+    }
+
+    button[type="submit"]:disabled {
+      opacity: .65;
     }
 
     #message {
       margin-top: 18px;
       padding: 14px;
-      border-radius: 12px;
+      border-radius: 14px;
       display: none;
+      text-align: center;
+      font-weight: 700;
     }
 
     #message.success {
       display: block;
-      background: #e9f8ee;
+      background: #e7f8ef;
+      color: #29734b;
     }
 
     #message.error {
       display: block;
-      background: #ffeaea;
+      background: #ffe8ee;
+      color: #a33454;
+    }
+
+    .footer-note {
+      text-align: center;
+      margin-top: 18px;
+      color: #9a79b5;
+      font-size: 13px;
+    }
+
+    @media (max-width: 480px) {
+      .logo {
+        font-size: 48px;
+      }
+
+      h1 {
+        font-size: 27px;
+      }
+
+      .card {
+        padding: 20px 15px;
+      }
     }
   </style>
 </head>
+
 <body>
 
 <div class="container">
+
+  <div class="brand">
+    <div>
+      <span class="logo">
+        <span class="n1">N</span>
+        <span class="u">u</span>
+        <span class="b">b</span>
+        <span class="i">i</span>
+      </span>
+      <span class="star">★</span>
+    </div>
+
+    <div class="tagline">Make it cute ✨</div>
+  </div>
+
   <div class="card">
 
-    <h1>Platz reservieren 🎀</h1>
-    <div class="subtitle">Nubi Mainz – Make it cute</div>
+    <div class="title-box">
+      <h1>Platz reservieren 🎀</h1>
+      <div class="subtitle">
+        Dein kreativer Termin bei Nubi Mainz
+      </div>
+    </div>
 
     <form id="bookingForm">
 
@@ -195,7 +336,11 @@
       <div class="check">
         <input id="safety" type="checkbox" required>
         <label for="safety">
-         Ich habe die <a href="https://www.nubimainz.de/allgemeine-sicherheitshinweise" target="_blank">Sicherheits- & Materialhinweise</a> gelesen und zur Kenntnis genommen.
+          Ich habe die
+          <a href="https://www.nubimainz.de/allgemeine-sicherheitshinweise" target="_blank">
+            Sicherheits- & Materialhinweise
+          </a>
+          gelesen und zur Kenntnis genommen.
         </label>
       </div>
 
@@ -207,6 +352,11 @@
 
     </form>
   </div>
+
+  <div class="footer-note">
+    🎀 Kreativ · Bunt · Einzigartig · Nubi Mainz
+  </div>
+
 </div>
 
 <script>
@@ -302,17 +452,18 @@
       remaining = Number(selected.dataset.remaining);
     }
 
-Array.from(peopleSelect.options).forEach(option => {
-  if (!option.value) return;
-  option.disabled = Number(option.value) > remaining;
-});
+    Array.from(peopleSelect.options).forEach(option => {
+      if (!option.value) return;
+      option.disabled = Number(option.value) > remaining;
+    });
+
     if (
-  peopleSelect.value &&
-  Number(peopleSelect.value) > remaining
-) {
-  peopleSelect.value = "";
-}
-}
+      peopleSelect.value &&
+      Number(peopleSelect.value) > remaining
+    ) {
+      peopleSelect.value = "";
+    }
+  }
 
   dateInput.addEventListener("change", loadAvailability);
 
