@@ -3,49 +3,74 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Nubi – Termine verwalten</title>
+  <title>Nubi – Termin-Zentrale</title>
 
   <style>
-    * { box-sizing: border-box; }
+    * {
+      box-sizing: border-box;
+    }
 
     body {
       margin: 0;
-      padding: 20px;
+      padding: 18px;
       font-family: Arial, sans-serif;
       background: #fff7fb;
       color: #333;
     }
 
-    .box {
-      max-width: 500px;
-      margin: 20px auto;
-      background: white;
-      padding: 24px;
-      border-radius: 20px;
-      box-shadow: 0 4px 20px rgba(0,0,0,.08);
+    .container {
+      max-width: 650px;
+      margin: 0 auto;
+    }
+
+    .header {
+      text-align: center;
+      margin: 15px 0 24px;
+    }
+
+    .logo {
+      width: 190px;
+      max-width: 70%;
+      height: auto;
+      display: block;
+      margin: 0 auto 8px;
     }
 
     h1 {
-      text-align: center;
-      margin-top: 0;
+      margin: 5px 0;
+      font-size: 26px;
     }
 
     .subtitle {
-      text-align: center;
-      margin-bottom: 25px;
+      color: #777;
+      font-size: 15px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 20px;
+      padding: 20px;
+      margin-bottom: 18px;
+      box-shadow: 0 4px 18px rgba(0,0,0,.07);
+    }
+
+    h2 {
+      margin-top: 0;
+      font-size: 20px;
     }
 
     label {
       display: block;
       font-weight: bold;
-      margin-top: 16px;
+      margin-top: 14px;
       margin-bottom: 6px;
     }
 
-    input, select {
+    input,
+    select {
       width: 100%;
-      padding: 14px;
-      border: 1px solid #ccc;
+      padding: 13px;
+      border: 1px solid #d7d7d7;
       border-radius: 12px;
       font-size: 16px;
       background: white;
@@ -53,98 +78,546 @@
 
     button {
       width: 100%;
-      padding: 15px;
-      margin-top: 22px;
-      border: 0;
+      padding: 14px;
+      margin-top: 14px;
+      border: none;
       border-radius: 12px;
-      font-size: 17px;
+      font-size: 16px;
       font-weight: bold;
       cursor: pointer;
     }
 
-    .block {
+    .primary {
+      background: #f38db6;
+      color: white;
+    }
+
+    .dark {
       background: #222;
       color: white;
     }
 
-    #message {
-      margin-top: 18px;
-      text-align: center;
-      font-weight: bold;
+    .light {
+      background: #f3f3f3;
+      color: #333;
     }
 
-    .hint {
-      margin-top: 20px;
-      font-size: 14px;
+    .danger {
+      background: #ffe2e2;
+      color: #a00000;
+    }
+
+    .slot-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 44px;
+      gap: 8px;
+      margin-top: 10px;
+      align-items: center;
+    }
+
+    .slot-row input {
+      margin: 0;
+    }
+
+    .remove-btn {
+      width: 44px;
+      height: 44px;
+      padding: 0;
+      margin: 0;
+      border-radius: 10px;
+      background: #fff0f0;
+      color: #c40000;
+      font-size: 20px;
+    }
+
+    .small-text {
+      color: #777;
+      font-size: 13px;
       line-height: 1.5;
-      color: #666;
+      margin-top: 10px;
+    }
+
+    .info {
+      margin-top: 14px;
+      padding: 12px;
+      background: #fff4fa;
+      border-radius: 12px;
+      font-weight: bold;
+      line-height: 1.5;
+    }
+
+    .message {
+      margin-top: 14px;
+      font-weight: bold;
+      text-align: center;
+      line-height: 1.5;
+    }
+
+    .divider {
+      height: 1px;
+      background: #eee;
+      margin: 22px 0;
     }
   </style>
 </head>
 
 <body>
 
-<div class="box">
-  <h1>🐻 Nubi Admin</h1>
-  <div class="subtitle">Termine schnell verwalten</div>
+<div class="container">
 
- <label for="pin">Admin-PIN</label>
-<input type="password" id="pin" inputmode="numeric" placeholder="PIN eingeben">
-  <label for="date">Datum</label>
-  <input type="date" id="date" onchange="updateAvailability()">
-
-  <label for="time">Uhrzeit</label>
-  <select id="time" onchange="updateAvailability()">
-    <option value="">Bitte auswählen</option>
-    <option value="11:00">11:00 Uhr</option>
-    <option value="13:00">13:00 Uhr</option>
-    <option value="15:00">15:00 Uhr</option>
-    <option value="17:00">17:00 Uhr</option>
-  </select>
-<div id="availabilityInfo" style="margin-top:16px;font-weight:bold;">
-  Freie Plätze werden nach Auswahl angezeigt.
-</div>
-  <label for="seats">Wie viele Plätze sperren?</label>
-  <select id="seats">
-    <option value="1">1 Platz</option>
-    <option value="2">2 Plätze</option>
-    <option value="3">3 Plätze</option>
-    <option value="4">4 Plätze</option>
-    <option value="5">5 Plätze</option>
-    <option value="6">6 Plätze</option>
-    <option value="7">7 Plätze</option>
-    <option value="8" selected>8 Plätze – komplett sperren</option>
-  </select>
-
-  <button class="block" onclick="blockSlot()">
-    Termin / Plätze sperren
-  </button>
-  <button onclick="unblockSlot()">
-  Termin wieder freigeben
-  </button>
-
-  <div id="message"></div>
-
-  <div class="hint">
-    Beispiel: 8 Plätze sperren = Termin komplett schließen.
-    Bei 5 gesperrten Plätzen bleiben maximal 3 Plätze für Reservierungen frei.
+  <div class="header">
+    <img src="nubi-logo.png" alt="Nubi Mainz" class="logo">
+    <h1>Termin-Zentrale</h1>
+    <div class="subtitle">Nubi Mainz · Termine & Plätze verwalten</div>
   </div>
+
+  <div class="card">
+    <h2>🔐 Admin</h2>
+
+    <label for="pin">Admin-PIN</label>
+    <input
+      type="password"
+      id="pin"
+      inputmode="numeric"
+      placeholder="PIN eingeben"
+    >
+
+    <label for="date">Datum auswählen</label>
+    <input
+      type="date"
+      id="date"
+      onchange="dateChanged()"
+    >
+
+    <div id="dayInfo" class="info">
+      Bitte zuerst ein Datum auswählen.
+    </div>
+  </div>
+
+
+  <div class="card">
+    <h2>🗓 Eigene Zeiten für diesen Tag</h2>
+
+    <div class="small-text">
+      Hier kannst du für einen bestimmten Tag andere Uhrzeiten
+      und eine andere Personenanzahl festlegen.
+      Beispiel: 14:00 Uhr mit 12 Plätzen.
+    </div>
+
+    <div id="customSlots"></div>
+
+    <button class="light" onclick="addSlotRow()">
+      ＋ Weitere Uhrzeit hinzufügen
+    </button>
+
+    <button class="primary" onclick="saveCustomSlots()">
+      Eigene Tageszeiten speichern
+    </button>
+
+    <button class="danger" onclick="resetCustomSlots()">
+      Standardzeiten für diesen Tag wiederherstellen
+    </button>
+
+    <div id="customMessage" class="message"></div>
+  </div>
+
+
+  <div class="card">
+    <h2>⛔ Plätze sperren</h2>
+
+    <label for="blockTime">Uhrzeit</label>
+    <select id="blockTime" onchange="updateAvailability()">
+      <option value="">Bitte auswählen</option>
+    </select>
+
+    <div id="availabilityInfo" class="info">
+      Freie Plätze werden nach Auswahl angezeigt.
+    </div>
+
+    <label for="seats">Wie viele Plätze sperren?</label>
+    <select id="seats">
+      <option value="">Bitte zuerst Termin auswählen</option>
+    </select>
+
+    <button class="dark" onclick="blockSlot()">
+      Termin / Plätze sperren
+    </button>
+
+    <button class="light" onclick="unblockSlot()">
+      Manuelle Sperre wieder entfernen
+    </button>
+
+    <div id="blockMessage" class="message"></div>
+  </div>
+
 </div>
+
 
 <script>
-async function blockSlot() {
-  const pin = document.getElementById("pin").value;
-  const date = document.getElementById("date").value;
-  const time = document.getElementById("time").value;
-  const seats = Number(document.getElementById("seats").value);
-  const message = document.getElementById("message");
-const availabilityInfo = document.getElementById("availabilityInfo");
-  if (!date || !time) {
-    message.textContent = "Bitte Datum und Uhrzeit auswählen.";
+const DEFAULT_TIMES = {
+  0: [],
+  1: ["13:00", "15:00", "17:00"],
+  2: ["13:00", "15:00", "17:00"],
+  3: ["13:00", "15:00", "17:00"],
+  4: ["13:00", "15:00", "17:00"],
+  5: ["13:00", "15:00", "17:00"],
+  6: ["11:00", "13:00", "15:00", "17:00"]
+};
+
+function getPin() {
+  return document.getElementById("pin").value.trim();
+}
+
+function getDate() {
+  return document.getElementById("date").value;
+}
+
+function dateChanged() {
+  const date = getDate();
+  const dayInfo = document.getElementById("dayInfo");
+
+  if (!date) {
+    dayInfo.textContent = "Bitte zuerst ein Datum auswählen.";
+    return;
+  }
+
+  const dateObject = new Date(`${date}T12:00:00`);
+  const weekday = dateObject.toLocaleDateString("de-DE", {
+    weekday: "long"
+  });
+
+  const formatted = dateObject.toLocaleDateString("de-DE");
+
+  dayInfo.textContent = `${weekday}, ${formatted}`;
+
+  loadDefaultRows();
+  loadTimesForBlocking();
+}
+
+function loadDefaultRows() {
+  const date = getDate();
+
+  if (!date) return;
+
+  const dateObject = new Date(`${date}T12:00:00`);
+  const day = dateObject.getDay();
+
+  const times = DEFAULT_TIMES[day] || [];
+
+  const container = document.getElementById("customSlots");
+  container.innerHTML = "";
+
+  if (times.length === 0) {
+    addSlotRow("", 8);
+    return;
+  }
+
+  for (const time of times) {
+    addSlotRow(time, 8);
+  }
+}
+
+function addSlotRow(time = "", capacity = 8) {
+  const container = document.getElementById("customSlots");
+
+  const row = document.createElement("div");
+  row.className = "slot-row";
+
+  row.innerHTML = `
+    <input
+      type="time"
+      class="custom-time"
+      value="${time}"
+      aria-label="Uhrzeit"
+    >
+
+    <input
+      type="number"
+      class="custom-capacity"
+      value="${capacity}"
+      min="1"
+      max="30"
+      inputmode="numeric"
+      aria-label="Personenanzahl"
+      placeholder="Plätze"
+    >
+
+    <button
+      type="button"
+      class="remove-btn"
+      onclick="this.parentElement.remove()"
+      aria-label="Uhrzeit entfernen"
+    >
+      ×
+    </button>
+  `;
+
+  container.appendChild(row);
+}
+
+async function saveCustomSlots() {
+  const pin = getPin();
+  const date = getDate();
+  const message = document.getElementById("customMessage");
+
+  if (!pin) {
+    message.textContent = "Bitte Admin-PIN eingeben.";
+    return;
+  }
+
+  if (!date) {
+    message.textContent = "Bitte Datum auswählen.";
+    return;
+  }
+
+  const rows = document.querySelectorAll(".slot-row");
+  const slots = [];
+
+  for (const row of rows) {
+    const time = row.querySelector(".custom-time").value;
+    const capacity = Number(
+      row.querySelector(".custom-capacity").value
+    );
+
+    if (!time) continue;
+
+    if (
+      !Number.isInteger(capacity) ||
+      capacity < 1 ||
+      capacity > 30
+    ) {
+      message.textContent =
+        "Personenanzahl muss zwischen 1 und 30 liegen.";
+      return;
+    }
+
+    slots.push({
+      time,
+      capacity
+    });
+  }
+
+  if (slots.length === 0) {
+    message.textContent =
+      "Bitte mindestens eine Uhrzeit eintragen.";
+    return;
+  }
+
+  const uniqueTimes = new Set(slots.map(slot => slot.time));
+
+  if (uniqueTimes.size !== slots.length) {
+    message.textContent =
+      "Eine Uhrzeit darf nicht doppelt eingetragen werden.";
     return;
   }
 
   message.textContent = "Wird gespeichert…";
+
+  try {
+    const response = await fetch("/api/admin-custom-slots", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        pin,
+        date,
+        slots
+      })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      message.textContent =
+        data.error || "Speichern nicht möglich.";
+      return;
+    }
+
+    message.textContent =
+      "✅ Eigene Zeiten und Plätze wurden gespeichert.";
+
+    await loadTimesForBlocking();
+
+  } catch (error) {
+    message.textContent = "Verbindung fehlgeschlagen.";
+  }
+}
+
+async function resetCustomSlots() {
+  const pin = getPin();
+  const date = getDate();
+  const message = document.getElementById("customMessage");
+
+  if (!pin) {
+    message.textContent = "Bitte Admin-PIN eingeben.";
+    return;
+  }
+
+  if (!date) {
+    message.textContent = "Bitte Datum auswählen.";
+    return;
+  }
+
+  const confirmed = confirm(
+    "Eigene Zeiten für diesen Tag entfernen und wieder die Standardzeiten verwenden?"
+  );
+
+  if (!confirmed) return;
+
+  message.textContent = "Wird zurückgesetzt…";
+
+  try {
+    const response = await fetch(
+      `/api/admin-custom-slots?pin=${encodeURIComponent(pin)}&date=${encodeURIComponent(date)}`,
+      {
+        method: "DELETE"
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      message.textContent =
+        data.error || "Zurücksetzen nicht möglich.";
+      return;
+    }
+
+    message.textContent =
+      "✅ Standardzeiten gelten wieder.";
+
+    loadDefaultRows();
+    await loadTimesForBlocking();
+
+  } catch (error) {
+    message.textContent = "Verbindung fehlgeschlagen.";
+  }
+}
+
+async function loadTimesForBlocking() {
+  const date = getDate();
+  const select = document.getElementById("blockTime");
+  const info = document.getElementById("availabilityInfo");
+
+  select.innerHTML =
+    '<option value="">Bitte auswählen</option>';
+
+  if (!date) return;
+
+  info.textContent = "Verfügbarkeit wird geladen…";
+
+  try {
+    const response = await fetch(
+      `/api/availability?date=${encodeURIComponent(date)}`
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      info.textContent =
+        "Verfügbarkeit konnte nicht geladen werden.";
+      return;
+    }
+
+    if (data.closed) {
+      info.textContent =
+        "⛔ Dieser komplette Tag ist geschlossen.";
+      return;
+    }
+
+    const times = data.times || [];
+
+    if (times.length === 0) {
+      info.textContent =
+        "Aktuell sind keine freien Termine vorhanden.";
+      return;
+    }
+
+    for (const slot of times) {
+      const option = document.createElement("option");
+
+      option.value = slot.time;
+      option.textContent =
+        `${slot.time} Uhr – ${slot.remaining} frei`;
+
+      option.dataset.remaining = slot.remaining;
+      option.dataset.capacity = slot.capacity;
+
+      select.appendChild(option);
+    }
+
+    info.textContent =
+      "Termin auswählen, um Plätze zu sperren.";
+
+  } catch (error) {
+    info.textContent =
+      "Verfügbarkeit konnte nicht geladen werden.";
+  }
+}
+
+function updateAvailability() {
+  const select = document.getElementById("blockTime");
+  const option = select.options[select.selectedIndex];
+
+  const info = document.getElementById("availabilityInfo");
+  const seatsSelect = document.getElementById("seats");
+
+  seatsSelect.innerHTML = "";
+
+  if (!option || !option.value) {
+    info.textContent =
+      "Freie Plätze werden nach Auswahl angezeigt.";
+
+    seatsSelect.innerHTML =
+      '<option value="">Bitte zuerst Termin auswählen</option>';
+
+    return;
+  }
+
+  const remaining = Number(option.dataset.remaining || 0);
+  const capacity = Number(option.dataset.capacity || 8);
+
+  info.textContent =
+    `✅ ${remaining} von ${capacity} Plätzen frei`;
+
+  for (let i = 1; i <= remaining; i++) {
+    const item = document.createElement("option");
+
+    item.value = i;
+
+    if (i === remaining) {
+      item.textContent =
+        `${i} ${i === 1 ? "Platz" : "Plätze"} – alle freien sperren`;
+    } else {
+      item.textContent =
+        `${i} ${i === 1 ? "Platz" : "Plätze"}`;
+    }
+
+    seatsSelect.appendChild(item);
+  }
+
+  seatsSelect.value = remaining;
+}
+
+async function blockSlot() {
+  const pin = getPin();
+  const date = getDate();
+  const time = document.getElementById("blockTime").value;
+  const seats = Number(document.getElementById("seats").value);
+  const message = document.getElementById("blockMessage");
+
+  if (!pin) {
+    message.textContent = "Bitte Admin-PIN eingeben.";
+    return;
+  }
+
+  if (!date || !time || !seats) {
+    message.textContent =
+      "Bitte Datum, Uhrzeit und Plätze auswählen.";
+    return;
+  }
+
+  message.textContent = "Wird gesperrt…";
 
   try {
     const response = await fetch("/api/admin-block", {
@@ -164,23 +637,34 @@ const availabilityInfo = document.getElementById("availabilityInfo");
 
     if (!response.ok) {
       message.textContent =
-        data.error || "Speichern nicht möglich.";
+        data.error || "Sperren nicht möglich.";
       return;
     }
 
-    message.textContent = "✅ Erfolgreich gespeichert.";
-  } catch (error) {
     message.textContent =
-      "Verbindung fehlgeschlagen.";
-  }
-} async function unblockSlot() {
-  const pin = document.getElementById("pin").value;
-  const date = document.getElementById("date").value;
-  const time = document.getElementById("time").value;
-  const message = document.getElementById("message");
+      "✅ Plätze wurden gesperrt.";
 
-  if (!pin || !date || !time) {
-    message.textContent = "Bitte PIN, Datum und Uhrzeit auswählen.";
+    await loadTimesForBlocking();
+
+  } catch (error) {
+    message.textContent = "Verbindung fehlgeschlagen.";
+  }
+}
+
+async function unblockSlot() {
+  const pin = getPin();
+  const date = getDate();
+  const time = document.getElementById("blockTime").value;
+  const message = document.getElementById("blockMessage");
+
+  if (!pin) {
+    message.textContent = "Bitte Admin-PIN eingeben.";
+    return;
+  }
+
+  if (!date || !time) {
+    message.textContent =
+      "Bitte Datum und Uhrzeit auswählen.";
     return;
   }
 
@@ -202,62 +686,33 @@ const availabilityInfo = document.getElementById("availabilityInfo");
     const data = await response.json();
 
     if (!response.ok) {
-      message.textContent = data.error || "Freigeben nicht möglich.";
+      message.textContent =
+        data.error || "Freigeben nicht möglich.";
       return;
     }
 
-    message.textContent = "✅ Termin wurde wieder freigegeben.";
+    message.textContent =
+      "✅ Manuelle Sperre wurde entfernt.";
+
+    await loadTimesForBlocking();
+
   } catch (error) {
     message.textContent = "Verbindung fehlgeschlagen.";
   }
 }
-async function updateAvailability() {
-  const date = document.getElementById("date").value;
-  const time = document.getElementById("time").value;
-  const info = document.getElementById("availabilityInfo");
 
-  if (!date || !time) {
-    info.textContent = "Freie Plätze werden nach Auswahl angezeigt.";
-    return;
-  }
+document.addEventListener("DOMContentLoaded", () => {
+  const dateInput = document.getElementById("date");
 
-  info.textContent = "Verfügbarkeit wird geprüft…";
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
 
-  try {
-    const response = await fetch(`/api/availability?date=${date}`);
-    const data = await response.json();
+  dateInput.value = `${year}-${month}-${day}`;
 
-    if (!response.ok) {
-      info.textContent = "Verfügbarkeit konnte nicht geladen werden.";
-      return;
-    }
-
-    const slot = (data.times || []).find(item => item.time === time);
-
-    if (!slot) {
-      info.textContent = "⛔ Dieser Termin ist nicht verfügbar.";
-      return;
-    }
-
-    info.textContent = `✅ ${slot.remaining} von 8 Plätzen frei`;
-    const seatsSelect = document.getElementById("seats");
-seatsSelect.innerHTML = "";
-
-for (let i = 1; i <= slot.remaining; i++) {
-  const option = document.createElement("option");
-  option.value = i;
-  option.textContent =
-    i === slot.remaining
-      ? `${i} ${i === 1 ? "Platz" : "Plätze"} – alle freien sperren`
-      : `${i} ${i === 1 ? "Platz" : "Plätze"}`;
-  seatsSelect.appendChild(option);
-}
-
-seatsSelect.value = slot.remaining;
-  } catch (error) {
-    info.textContent = "Verfügbarkeit konnte nicht geladen werden.";
-  }
-}
+  dateChanged();
+});
 </script>
 
 </body>
