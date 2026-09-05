@@ -1,3 +1,5 @@
+import { getRlpHoliday } from "../../lib/holidays.js";
+
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
@@ -25,7 +27,10 @@ export async function onRequestGet(context) {
 
   try {
     if (!env.DB) {
-      return json({ error: "D1-Datenbank nicht verbunden." }, 500);
+      return json(
+        { error: "D1-Datenbank nicht verbunden." },
+        500
+      );
     }
 
     const url = new URL(request.url);
@@ -35,10 +40,10 @@ export async function onRequestGet(context) {
       return json({ error: "Datum fehlt." }, 400);
     }
 
-    // Ist der komplette Tag geschlossen?
+    // Manuell komplett geschlossener Tag
     const closedDay = await env.DB
       .prepare(`
-        SELECT date
+        SELECT date, reason
         FROM closed_days
         WHERE date = ?
         LIMIT 1
@@ -50,7 +55,8 @@ export async function onRequestGet(context) {
       return json({
         date,
         times: [],
-        closed: true
+        closed: true,
+        reason: closedDay.reason || "Geschlossen"
       });
     }
 
@@ -67,7 +73,28 @@ export async function onRequestGet(context) {
 
     const customSlots = customResult.results || [];
 
-    // Bestehende Sperren, z.B. Calendly oder Admin
+    /*
+      Gesetzliche Feiertage Rheinland-Pfalz:
+      Standardmäßig geschlossen.
+
+      Ausnahme:
+      Wenn du über die Admin-Seite eigene Zeiten
+      für diesen Feiertag speicherst, wird geöffnet.
+    */
+    const holiday = getRlpHoliday(date);
+
+    if (holiday && customSlots.length === 0) {
+      return json({
+        date,
+        times: [],
+        closed: true,
+        holiday: true,
+        holidayName: holiday.name,
+        reason: holiday.name
+      });
+    }
+
+    // Bestehende Sperren
     const blockedResult = await env.DB
       .prepare(`
         SELECT
@@ -111,14 +138,18 @@ export async function onRequestGet(context) {
     if (customSlots.length > 0) {
       // Eigener Tagesplan hat höchste Priorität
       slotDefinitions = customSlots
-        .filter(row => Number(row.is_closed || 0) === 0)
+        .filter(
+          row => Number(row.is_closed || 0) === 0
+        )
         .map(row => ({
           time: row.time,
-          capacity: Number(row.capacity || DEFAULT_CAPACITY)
+          capacity: Number(
+            row.capacity || DEFAULT_CAPACITY
+          )
         }));
     } else {
       // Alte importierte Calendly-/Urlaubszeiten prüfen.
-      // Reine manuelle Admin-Sperren ändern den normalen Tagesplan nicht.
+      // Reine Admin-Sperren verändern den Tagesplan nicht.
       const legacyResult = await env.DB
         .prepare(`
           SELECT DISTINCT time
@@ -130,7 +161,9 @@ export async function onRequestGet(context) {
         .bind(date)
         .all();
 
-      const legacyTimes = (legacyResult.results || [])
+      const legacyTimes = (
+        legacyResult.results || []
+      )
         .map(row => row.time)
         .filter(Boolean);
 
@@ -147,7 +180,9 @@ export async function onRequestGet(context) {
           timeZone: "Europe/Berlin"
         });
 
-        slotDefinitions = (NORMAL_TIMES[weekday] || []).map(time => ({
+        slotDefinitions = (
+          NORMAL_TIMES[weekday] || []
+        ).map(time => ({
           time,
           capacity: DEFAULT_CAPACITY
         }));
@@ -156,8 +191,11 @@ export async function onRequestGet(context) {
 
     const slots = slotDefinitions
       .map(slot => {
-        const blocked = blockedMap[slot.time] || 0;
-        const booked = bookedMap[slot.time] || 0;
+        const blocked =
+          blockedMap[slot.time] || 0;
+
+        const booked =
+          bookedMap[slot.time] || 0;
 
         const remaining = Math.max(
           0,
@@ -176,7 +214,9 @@ export async function onRequestGet(context) {
     return json({
       date,
       times: slots,
-      closed: false
+      closed: false,
+      holiday: Boolean(holiday),
+      holidayName: holiday?.name || null
     });
 
   } catch (error) {
@@ -184,7 +224,8 @@ export async function onRequestGet(context) {
 
     return json(
       {
-        error: "Verfügbarkeit konnte nicht geladen werden.",
+        error:
+          "Verfügbarkeit konnte nicht geladen werden.",
         details: error?.message || String(error)
       },
       500
