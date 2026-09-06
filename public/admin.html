@@ -310,60 +310,7 @@
 
 </div>
 
-async function openDateRange() {
-  const pin = getPin();
 
-  const startDate =
-    document.getElementById("rangeStart").value;
-
-  const endDate =
-    document.getElementById("rangeEnd").value;
-
-  const message =
-    document.getElementById("rangeMessage");
-
-  if (!pin) {
-    message.textContent = "Bitte Admin-PIN eingeben.";
-    return;
-  }
-
-  if (!startDate || !endDate) {
-    message.textContent =
-      "Bitte Start- und Enddatum auswählen.";
-    return;
-  }
-
-  const confirmed = confirm(
-    `Zeitraum vom ${startDate} bis ${endDate} wirklich wieder öffnen?`
-  );
-
-  if (!confirmed) return;
-
-  message.textContent = "Zeitraum wird geöffnet…";
-
-  try {
-    const response = await fetch(
-      `/api/admin-range?pin=${encodeURIComponent(pin)}&startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`,
-      {
-        method: "DELETE"
-      }
-    );
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      message.textContent =
-        data.error || "Zeitraum konnte nicht geöffnet werden.";
-      return;
-    }
-
-    message.textContent =
-      `✅ ${data.count} Tage wurden wieder geöffnet.`;
-
-  } catch (error) {
-    message.textContent = "Verbindung fehlgeschlagen.";
-  }
-} <script> async function closeDateRange() {
   const pin = getPin();
 
   const startDate =
@@ -425,7 +372,60 @@ async function openDateRange() {
   } catch (error) {
     message.textContent = "Verbindung fehlgeschlagen.";
   }
-} async function closeWholeDay() {
+} async function openDateRange() {
+  const pin = getPin();
+
+  const startDate =
+    document.getElementById("rangeStart").value;
+
+  const endDate =
+    document.getElementById("rangeEnd").value;
+
+  const message =
+    document.getElementById("rangeMessage");
+
+  if (!pin) {
+    message.textContent = "Bitte Admin-PIN eingeben.";
+    return;
+  }
+
+  if (!startDate || !endDate) {
+    message.textContent =
+      "Bitte Start- und Enddatum auswählen.";
+    return;
+  }
+
+  const confirmed = confirm(
+    `Zeitraum vom ${startDate} bis ${endDate} wirklich wieder öffnen?`
+  );
+
+  if (!confirmed) return;
+
+  message.textContent = "Zeitraum wird geöffnet…";
+
+  try {
+    const response = await fetch(
+      `/api/admin-range?pin=${encodeURIComponent(pin)}&startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`,
+      {
+        method: "DELETE"
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      message.textContent =
+        data.error || "Zeitraum konnte nicht geöffnet werden.";
+      return;
+    }
+
+    message.textContent =
+      `✅ ${data.count} Tage wurden wieder geöffnet.`;
+
+  } catch (error) {
+    message.textContent = "Verbindung fehlgeschlagen.";
+  }
+} <script> async function closeDateRange() { async function closeWholeDay() {
   const pin = getPin();
   const date = getDate();
   const reason =
