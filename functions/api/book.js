@@ -196,55 +196,37 @@ export async function onRequestPost(context) {
           customSlot.capacity || DEFAULT_CAPACITY
         );
       }
-    } else {
-      // Alte Calendly-/Urlaubszeiten
-      const legacyDay = await env.DB
+      } else {
+      const weekday = new Date(
+        `${date}T12:00:00`
+      ).toLocaleDateString("de-DE", {
+        weekday: "long",
+        timeZone: "Europe/Berlin"
+      });
+
+      const standardAllowed =
+        (NORMAL_TIMES[weekday] || []).includes(time);
+
+      // Alte Calendly-Sonderzeiten bleiben ebenfalls buchbar
+      const legacySlot = await env.DB
         .prepare(`
           SELECT COUNT(*) AS total
           FROM blocked_slots
           WHERE date = ?
+            AND time = ?
             AND reason != 'Admin – manuell gesperrt'
         `)
-        .bind(date)
+        .bind(date, time)
         .first();
 
-      const hasLegacySlots =
-        Number(legacyDay?.total || 0) > 0;
+      const legacyAllowed =
+        Number(legacySlot?.total || 0) > 0;
 
-      if (hasLegacySlots) {
-        const legacySlot = await env.DB
-          .prepare(`
-            SELECT COUNT(*) AS total
-            FROM blocked_slots
-            WHERE date = ?
-              AND time = ?
-              AND reason != 'Admin – manuell gesperrt'
-          `)
-          .bind(date, time)
-          .first();
-
-        if (
-          Number(legacySlot?.total || 0) > 0
-        ) {
-          slotAllowed = true;
-          capacity = DEFAULT_CAPACITY;
-        }
-      } else {
-        const weekday = new Date(
-          `${date}T12:00:00`
-        ).toLocaleDateString("de-DE", {
-          weekday: "long",
-          timeZone: "Europe/Berlin"
-        });
-
-        if (
-          (NORMAL_TIMES[weekday] || []).includes(time)
-        ) {
-          slotAllowed = true;
-          capacity = DEFAULT_CAPACITY;
-        }
+      if (standardAllowed || legacyAllowed) {
+        slotAllowed = true;
+        capacity = DEFAULT_CAPACITY;
       }
-    }
+    }  
 
     if (!slotAllowed) {
       return json(
