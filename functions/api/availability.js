@@ -147,9 +147,19 @@ export async function onRequestGet(context) {
             row.capacity || DEFAULT_CAPACITY
           )
         }));
+    
     } else {
-      // Alte importierte Calendly-/Urlaubszeiten prüfen.
-      // Reine Admin-Sperren verändern den Tagesplan nicht.
+      const weekday = new Date(
+        `${date}T12:00:00`
+      ).toLocaleDateString("de-DE", {
+        weekday: "long",
+        timeZone: "Europe/Berlin"
+      });
+
+      const standardTimes =
+        NORMAL_TIMES[weekday] || [];
+
+      // Bestehende Calendly-Sonderzeiten zusätzlich behalten
       const legacyResult = await env.DB
         .prepare(`
           SELECT DISTINCT time
@@ -167,28 +177,18 @@ export async function onRequestGet(context) {
         .map(row => row.time)
         .filter(Boolean);
 
-      if (legacyTimes.length > 0) {
-        slotDefinitions = legacyTimes.map(time => ({
-          time,
-          capacity: DEFAULT_CAPACITY
-        }));
-      } else {
-        const weekday = new Date(
-          `${date}T12:00:00`
-        ).toLocaleDateString("de-DE", {
-          weekday: "long",
-          timeZone: "Europe/Berlin"
-        });
+      const allTimes = [
+        ...new Set([
+          ...standardTimes,
+          ...legacyTimes
+        ])
+      ].sort();
 
-        slotDefinitions = (
-          NORMAL_TIMES[weekday] || []
-        ).map(time => ({
-          time,
-          capacity: DEFAULT_CAPACITY
-        }));
-      }
+      slotDefinitions = allTimes.map(time => ({
+        time,
+        capacity: DEFAULT_CAPACITY
+      }));
     }
-
     const slots = slotDefinitions
       .map(slot => {
         const blocked =
