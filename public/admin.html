@@ -168,7 +168,9 @@
   <div class="header">
     <img src="nubi-logo.png" alt="Nubi Mainz" class="logo">
     <h1>Termin-Zentrale</h1>
-    <div class="subtitle">Nubi Mainz · Termine & Plätze verwalten</div>
+    <div class="subtitle">
+      Nubi Mainz · Termine & Plätze verwalten
+    </div>
   </div>
 
   <div class="card">
@@ -193,6 +195,7 @@
       Bitte zuerst ein Datum auswählen.
     </div>
   </div>
+
   <div class="card">
     <h2>🚪 Ganzen Tag schließen</h2>
 
@@ -217,8 +220,9 @@
     </button>
 
     <div id="dayMessage" class="message"></div>
-  </div> 
-<div class="card">
+  </div>
+
+  <div class="card">
     <h2>🏖 Urlaubszeitraum schließen</h2>
 
     <div class="small-text">
@@ -247,12 +251,15 @@
 
     <button class="danger" onclick="closeDateRange()">
       🏖 Zeitraum schließen
-    </button>     <button class="light" onclick="openDateRange()">
+    </button>
+
+    <button class="light" onclick="openDateRange()">
       ✅ Zeitraum wieder öffnen
     </button>
 
     <div id="rangeMessage" class="message"></div>
-</div>
+  </div>
+
   <div class="card">
     <h2>🗓 Eigene Zeiten für diesen Tag</h2>
 
@@ -260,8 +267,8 @@
       Hier kannst du für einen bestimmten Tag andere Uhrzeiten
       und eine andere Personenanzahl festlegen.
       Beispiel: 14:00 Uhr mit 12 Plätzen.
-    </div> 
-  
+    </div>
+
     <div id="customSlots"></div>
 
     <button class="light" onclick="addSlotRow()">
@@ -278,7 +285,6 @@
 
     <div id="customMessage" class="message"></div>
   </div>
-
 
   <div class="card">
     <h2>⛔ Plätze sperren</h2>
@@ -310,7 +316,27 @@
 
 </div>
 
+<script>
 
+const DEFAULT_TIMES = {
+  0: [],
+  1: ["13:00", "15:00", "17:00"],
+  2: ["13:00", "15:00", "17:00"],
+  3: ["13:00", "15:00", "17:00"],
+  4: ["13:00", "15:00", "17:00"],
+  5: ["13:00", "15:00", "17:00"],
+  6: ["11:00", "13:00", "15:00", "17:00"]
+};
+
+function getPin() {
+  return document.getElementById("pin").value.trim();
+}
+
+function getDate() {
+  return document.getElementById("date").value;
+}
+
+async function closeDateRange() {
   const pin = getPin();
 
   const startDate =
@@ -362,7 +388,8 @@
 
     if (!response.ok) {
       message.textContent =
-        data.error || "Zeitraum konnte nicht geschlossen werden.";
+        data.error ||
+        "Zeitraum konnte nicht geschlossen werden.";
       return;
     }
 
@@ -372,7 +399,9 @@
   } catch (error) {
     message.textContent = "Verbindung fehlgeschlagen.";
   }
-} async function openDateRange() {
+}
+
+async function openDateRange() {
   const pin = getPin();
 
   const startDate =
@@ -415,7 +444,8 @@
 
     if (!response.ok) {
       message.textContent =
-        data.error || "Zeitraum konnte nicht geöffnet werden.";
+        data.error ||
+        "Zeitraum konnte nicht geöffnet werden.";
       return;
     }
 
@@ -425,9 +455,12 @@
   } catch (error) {
     message.textContent = "Verbindung fehlgeschlagen.";
   }
-} <script> async function closeDateRange() { async function closeWholeDay() {
+}
+
+async function closeWholeDay() {
   const pin = getPin();
   const date = getDate();
+
   const reason =
     document.getElementById("closeReason").value.trim();
 
@@ -533,41 +566,30 @@ async function openWholeDay() {
     message.textContent = "Verbindung fehlgeschlagen.";
   }
 }
-const DEFAULT_TIMES = {
-  0: [],
-  1: ["13:00", "15:00", "17:00"],
-  2: ["13:00", "15:00", "17:00"],
-  3: ["13:00", "15:00", "17:00"],
-  4: ["13:00", "15:00", "17:00"],
-  5: ["13:00", "15:00", "17:00"],
-  6: ["11:00", "13:00", "15:00", "17:00"]
-};
-
-function getPin() {
-  return document.getElementById("pin").value.trim();
-}
-
-function getDate() {
-  return document.getElementById("date").value;
-}
 
 function dateChanged() {
   const date = getDate();
   const dayInfo = document.getElementById("dayInfo");
 
   if (!date) {
-    dayInfo.textContent = "Bitte zuerst ein Datum auswählen.";
+    dayInfo.textContent =
+      "Bitte zuerst ein Datum auswählen.";
     return;
   }
 
-  const dateObject = new Date(`${date}T12:00:00`);
-  const weekday = dateObject.toLocaleDateString("de-DE", {
-    weekday: "long"
-  });
+  const dateObject =
+    new Date(`${date}T12:00:00`);
 
-  const formatted = dateObject.toLocaleDateString("de-DE");
+  const weekday =
+    dateObject.toLocaleDateString("de-DE", {
+      weekday: "long"
+    });
 
-  dayInfo.textContent = `${weekday}, ${formatted}`;
+  const formatted =
+    dateObject.toLocaleDateString("de-DE");
+
+  dayInfo.textContent =
+    `${weekday}, ${formatted}`;
 
   loadDefaultRows();
   loadTimesForBlocking();
@@ -578,12 +600,17 @@ function loadDefaultRows() {
 
   if (!date) return;
 
-  const dateObject = new Date(`${date}T12:00:00`);
+  const dateObject =
+    new Date(`${date}T12:00:00`);
+
   const day = dateObject.getDay();
 
-  const times = DEFAULT_TIMES[day] || [];
+  const times =
+    DEFAULT_TIMES[day] || [];
 
-  const container = document.getElementById("customSlots");
+  const container =
+    document.getElementById("customSlots");
+
   container.innerHTML = "";
 
   if (times.length === 0) {
@@ -597,9 +624,12 @@ function loadDefaultRows() {
 }
 
 function addSlotRow(time = "", capacity = 8) {
-  const container = document.getElementById("customSlots");
+  const container =
+    document.getElementById("customSlots");
 
-  const row = document.createElement("div");
+  const row =
+    document.createElement("div");
+
   row.className = "slot-row";
 
   row.innerHTML = `
@@ -637,23 +667,31 @@ function addSlotRow(time = "", capacity = 8) {
 async function saveCustomSlots() {
   const pin = getPin();
   const date = getDate();
-  const message = document.getElementById("customMessage");
+
+  const message =
+    document.getElementById("customMessage");
 
   if (!pin) {
-    message.textContent = "Bitte Admin-PIN eingeben.";
+    message.textContent =
+      "Bitte Admin-PIN eingeben.";
     return;
   }
 
   if (!date) {
-    message.textContent = "Bitte Datum auswählen.";
+    message.textContent =
+      "Bitte Datum auswählen.";
     return;
   }
 
-  const rows = document.querySelectorAll(".slot-row");
+  const rows =
+    document.querySelectorAll(".slot-row");
+
   const slots = [];
 
   for (const row of rows) {
-    const time = row.querySelector(".custom-time").value;
+    const time =
+      row.querySelector(".custom-time").value;
+
     const capacity = Number(
       row.querySelector(".custom-capacity").value
     );
@@ -682,7 +720,8 @@ async function saveCustomSlots() {
     return;
   }
 
-  const uniqueTimes = new Set(slots.map(slot => slot.time));
+  const uniqueTimes =
+    new Set(slots.map(slot => slot.time));
 
   if (uniqueTimes.size !== slots.length) {
     message.textContent =
@@ -690,22 +729,25 @@ async function saveCustomSlots() {
     return;
   }
 
-  message.textContent = "Wird gespeichert…";
+  message.textContent =
+    "Wird gespeichert…";
 
   try {
-    const response = await fetch("/api/admin-custom-slots", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        pin,
-        date,
-        slots
-      })
-    });
+    const response =
+      await fetch("/api/admin-custom-slots", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          pin,
+          date,
+          slots
+        })
+      });
 
-    const data = await response.json();
+    const data =
+      await response.json();
 
     if (!response.ok) {
       message.textContent =
@@ -719,22 +761,27 @@ async function saveCustomSlots() {
     await loadTimesForBlocking();
 
   } catch (error) {
-    message.textContent = "Verbindung fehlgeschlagen.";
+    message.textContent =
+      "Verbindung fehlgeschlagen.";
   }
 }
 
 async function resetCustomSlots() {
   const pin = getPin();
   const date = getDate();
-  const message = document.getElementById("customMessage");
+
+  const message =
+    document.getElementById("customMessage");
 
   if (!pin) {
-    message.textContent = "Bitte Admin-PIN eingeben.";
+    message.textContent =
+      "Bitte Admin-PIN eingeben.";
     return;
   }
 
   if (!date) {
-    message.textContent = "Bitte Datum auswählen.";
+    message.textContent =
+      "Bitte Datum auswählen.";
     return;
   }
 
@@ -744,7 +791,8 @@ async function resetCustomSlots() {
 
   if (!confirmed) return;
 
-  message.textContent = "Wird zurückgesetzt…";
+  message.textContent =
+    "Wird zurückgesetzt…";
 
   try {
     const response = await fetch(
@@ -754,11 +802,13 @@ async function resetCustomSlots() {
       }
     );
 
-    const data = await response.json();
+    const data =
+      await response.json();
 
     if (!response.ok) {
       message.textContent =
-        data.error || "Zurücksetzen nicht möglich.";
+        data.error ||
+        "Zurücksetzen nicht möglich.";
       return;
     }
 
@@ -769,28 +819,35 @@ async function resetCustomSlots() {
     await loadTimesForBlocking();
 
   } catch (error) {
-    message.textContent = "Verbindung fehlgeschlagen.";
+    message.textContent =
+      "Verbindung fehlgeschlagen.";
   }
 }
 
 async function loadTimesForBlocking() {
   const date = getDate();
-  const select = document.getElementById("blockTime");
-  const info = document.getElementById("availabilityInfo");
+
+  const select =
+    document.getElementById("blockTime");
+
+  const info =
+    document.getElementById("availabilityInfo");
 
   select.innerHTML =
     '<option value="">Bitte auswählen</option>';
 
   if (!date) return;
 
-  info.textContent = "Verfügbarkeit wird geladen…";
+  info.textContent =
+    "Verfügbarkeit wird geladen…";
 
   try {
     const response = await fetch(
       `/api/availability?date=${encodeURIComponent(date)}`
     );
 
-    const data = await response.json();
+    const data =
+      await response.json();
 
     if (!response.ok) {
       info.textContent =
@@ -799,18 +856,19 @@ async function loadTimesForBlocking() {
     }
 
     if (data.closed) {
-  if (data.holiday) {
-    info.textContent =
-      `🎉 Feiertag: ${data.holidayName} – standardmäßig geschlossen. Du kannst oben eigene Zeiten eintragen, wenn du öffnen möchtest.`;
-  } else {
-    info.textContent =
-      "⛔ Dieser komplette Tag ist geschlossen.";
-  }
+      if (data.holiday) {
+        info.textContent =
+          `🎉 Feiertag: ${data.holidayName} – standardmäßig geschlossen. Du kannst oben eigene Zeiten eintragen, wenn du öffnen möchtest.`;
+      } else {
+        info.textContent =
+          "⛔ Dieser komplette Tag ist geschlossen.";
+      }
 
-  return;
-}
+      return;
+    }
 
-    const times = data.times || [];
+    const times =
+      data.times || [];
 
     if (times.length === 0) {
       info.textContent =
@@ -819,14 +877,19 @@ async function loadTimesForBlocking() {
     }
 
     for (const slot of times) {
-      const option = document.createElement("option");
+      const option =
+        document.createElement("option");
 
       option.value = slot.time;
+
       option.textContent =
         `${slot.time} Uhr – ${slot.remaining} frei`;
 
-      option.dataset.remaining = slot.remaining;
-      option.dataset.capacity = slot.capacity;
+      option.dataset.remaining =
+        slot.remaining;
+
+      option.dataset.capacity =
+        slot.capacity;
 
       select.appendChild(option);
     }
@@ -841,11 +904,17 @@ async function loadTimesForBlocking() {
 }
 
 function updateAvailability() {
-  const select = document.getElementById("blockTime");
-  const option = select.options[select.selectedIndex];
+  const select =
+    document.getElementById("blockTime");
 
-  const info = document.getElementById("availabilityInfo");
-  const seatsSelect = document.getElementById("seats");
+  const option =
+    select.options[select.selectedIndex];
+
+  const info =
+    document.getElementById("availabilityInfo");
+
+  const seatsSelect =
+    document.getElementById("seats");
 
   seatsSelect.innerHTML = "";
 
@@ -859,14 +928,18 @@ function updateAvailability() {
     return;
   }
 
-  const remaining = Number(option.dataset.remaining || 0);
-  const capacity = Number(option.dataset.capacity || 8);
+  const remaining =
+    Number(option.dataset.remaining || 0);
+
+  const capacity =
+    Number(option.dataset.capacity || 8);
 
   info.textContent =
     `✅ ${remaining} von ${capacity} Plätzen frei`;
 
   for (let i = 1; i <= remaining; i++) {
-    const item = document.createElement("option");
+    const item =
+      document.createElement("option");
 
     item.value = i;
 
@@ -887,12 +960,21 @@ function updateAvailability() {
 async function blockSlot() {
   const pin = getPin();
   const date = getDate();
-  const time = document.getElementById("blockTime").value;
-  const seats = Number(document.getElementById("seats").value);
-  const message = document.getElementById("blockMessage");
+
+  const time =
+    document.getElementById("blockTime").value;
+
+  const seats =
+    Number(
+      document.getElementById("seats").value
+    );
+
+  const message =
+    document.getElementById("blockMessage");
 
   if (!pin) {
-    message.textContent = "Bitte Admin-PIN eingeben.";
+    message.textContent =
+      "Bitte Admin-PIN eingeben.";
     return;
   }
 
@@ -902,23 +984,26 @@ async function blockSlot() {
     return;
   }
 
-  message.textContent = "Wird gesperrt…";
+  message.textContent =
+    "Wird gesperrt…";
 
   try {
-    const response = await fetch("/api/admin-block", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        pin,
-        date,
-        time,
-        seats
-      })
-    });
+    const response =
+      await fetch("/api/admin-block", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          pin,
+          date,
+          time,
+          seats
+        })
+      });
 
-    const data = await response.json();
+    const data =
+      await response.json();
 
     if (!response.ok) {
       message.textContent =
@@ -932,18 +1017,24 @@ async function blockSlot() {
     await loadTimesForBlocking();
 
   } catch (error) {
-    message.textContent = "Verbindung fehlgeschlagen.";
+    message.textContent =
+      "Verbindung fehlgeschlagen.";
   }
 }
 
 async function unblockSlot() {
   const pin = getPin();
   const date = getDate();
-  const time = document.getElementById("blockTime").value;
-  const message = document.getElementById("blockMessage");
+
+  const time =
+    document.getElementById("blockTime").value;
+
+  const message =
+    document.getElementById("blockMessage");
 
   if (!pin) {
-    message.textContent = "Bitte Admin-PIN eingeben.";
+    message.textContent =
+      "Bitte Admin-PIN eingeben.";
     return;
   }
 
@@ -953,26 +1044,30 @@ async function unblockSlot() {
     return;
   }
 
-  message.textContent = "Wird freigegeben…";
+  message.textContent =
+    "Wird freigegeben…";
 
   try {
-    const response = await fetch("/api/admin-unblock", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        pin,
-        date,
-        time
-      })
-    });
+    const response =
+      await fetch("/api/admin-unblock", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          pin,
+          date,
+          time
+        })
+      });
 
-    const data = await response.json();
+    const data =
+      await response.json();
 
     if (!response.ok) {
       message.textContent =
-        data.error || "Freigeben nicht möglich.";
+        data.error ||
+        "Freigeben nicht möglich.";
       return;
     }
 
@@ -982,22 +1077,38 @@ async function unblockSlot() {
     await loadTimesForBlocking();
 
   } catch (error) {
-    message.textContent = "Verbindung fehlgeschlagen.";
+    message.textContent =
+      "Verbindung fehlgeschlagen.";
   }
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-  const dateInput = document.getElementById("date");
+document.addEventListener(
+  "DOMContentLoaded",
+  () => {
+    const dateInput =
+      document.getElementById("date");
 
-  const today = new Date();
-  const year = today.getFullYear();
-  const month = String(today.getMonth() + 1).padStart(2, "0");
-  const day = String(today.getDate()).padStart(2, "0");
+    const today =
+      new Date();
 
-  dateInput.value = `${year}-${month}-${day}`;
+    const year =
+      today.getFullYear();
 
-  dateChanged();
-});
+    const month =
+      String(today.getMonth() + 1)
+        .padStart(2, "0");
+
+    const day =
+      String(today.getDate())
+        .padStart(2, "0");
+
+    dateInput.value =
+      `${year}-${month}-${day}`;
+
+    dateChanged();
+  }
+);
+
 </script>
 
 </body>
