@@ -354,7 +354,10 @@ export async function onRequestPost(context) {
           Reservierung stornieren
         </a>
       </p>
-
+<p>
+  <strong>Hinweis zum Datenschutz:</strong><br>
+  Deine Reservierungsdaten werden ausschließlich zur Durchführung deiner Reservierung verwendet und 7 Tage nach deinem Termin automatisch gelöscht.
+</p>
       <p>
         Wir freuen uns auf dich! 💕<br>
         Nubi Mainz
