@@ -1,0 +1,16 @@
+name: Delete old booking data
+
+on:
+  schedule:
+    - cron: "15 3 * * *"
+  workflow_dispatch:
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete bookings older than 7 days
+        run: |
+          RESPONSE=$(curl --fail --silent --show-error "https://nubi-reservierung.pages.dev/api/cleanup-bookings")
+          echo "$RESPONSE"
+          echo "$RESPONSE" | grep -q '"success":true'
