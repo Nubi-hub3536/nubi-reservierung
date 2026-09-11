@@ -85,18 +85,34 @@ export async function onRequestGet(context) {
     let sent = 0;
 
     for (const booking of result.results || []) {
-      const appointment = new Date(
-        `${booking.date}T${booking.time}:00+02:00`
-      );
+const [year, month, day] = booking.date.split("-").map(Number);
+const [hour, minute] = booking.time.split(":").map(Number);
 
-      const sendAfter = new Date(
-        appointment.getTime() + 3 * 60 * 60 * 1000
-      );
+const appointmentLocal = Date.UTC(
+  year,
+  month - 1,
+  day,
+  hour,
+  minute
+);
 
-      if (now < sendAfter) {
-        continue;
-      }
+const [todayYear, todayMonth, todayDay] = today.split("-").map(Number);
+const [currentHour, currentMinute] = currentTime.split(":").map(Number);
 
+const nowLocal = Date.UTC(
+  todayYear,
+  todayMonth - 1,
+  todayDay,
+  currentHour,
+  currentMinute
+);
+
+const sendAfter = appointmentLocal + 3 * 60 * 60 * 1000;
+
+if (nowLocal < sendAfter) {
+  continue;
+}
+      
       const customerHtml = `
         <div style="
           font-family:Arial,sans-serif;
