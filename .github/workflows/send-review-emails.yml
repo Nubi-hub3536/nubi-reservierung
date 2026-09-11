@@ -1,0 +1,17 @@
+name: Send review emails
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+jobs:
+  send-review-emails:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Send review emails after appointments
+        run: |
+          RESPONSE=$(curl --fail --silent --show-error "https://nubi-reservierung.pages.dev/api/send-review-email")
+          echo "$RESPONSE"
+          echo "$RESPONSE" | grep -q '"success":true'
