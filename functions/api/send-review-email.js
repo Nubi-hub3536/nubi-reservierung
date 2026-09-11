@@ -61,7 +61,32 @@ export async function onRequestGet(context) {
 
     const berlinNow = formatter.format(now);
     const [today, currentTime] = berlinNow.split(" ");
+await env.DB.prepare(`
+  CREATE TABLE IF NOT EXISTS review_email_state (
+    key TEXT PRIMARY KEY,
+    value TEXT
+  )
+`).run();
 
+const reviewState = await env.DB.prepare(`
+  SELECT value
+  FROM review_email_state
+  WHERE key = 'initialized'
+  LIMIT 1
+`).first();
+
+if (!reviewState) {
+  await env.DB.prepare(`
+    UPDATE bookings
+    SET review_email_sent = 1
+    WHERE (date || ' ' || time) <= ?
+  `).bind(`${today} ${currentTime}`).run();
+
+  await env.DB.prepare(`
+    INSERT OR IGNORE INTO review_email_state (key, value)
+    VALUES ('initialized', CURRENT_TIMESTAMP)
+  `).run();
+}
     const result = await env.DB
       .prepare(`
         SELECT
