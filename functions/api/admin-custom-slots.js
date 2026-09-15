@@ -42,20 +42,15 @@ export async function onRequestPost(context) {
 
     // Neue Zeiten speichern
     for (const slot of slots) {
-      const time = String(slot.time || "").trim();
-      const capacity = Number(slot.capacity);
+  const time = String(slot.time || "").trim();
+  const capacity = 8;
 
-      if (
-        !/^\d{2}:\d{2}$/.test(time) ||
-        !Number.isInteger(capacity) ||
-        capacity < 1 ||
-        capacity > 30
-      ) {
-        return json(
-          { error: "Uhrzeit oder Personenanzahl ist ungültig." },
-          400
-        );
-      }
+  if (!/^\d{2}:\d{2}$/.test(time)) {
+    return json(
+      { error: "Uhrzeit ist ungültig." },
+      400
+    );
+  }
 
       await env.DB
         .prepare(`
