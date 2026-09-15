@@ -260,7 +260,17 @@ export async function onRequestPost(context) {
       `)
       .bind(id)
       .run();
+let emailResult = { sent: false };
 
+try {
+  emailResult =
+    await sendCancellationEmails(env, booking);
+} catch (mailError) {
+  console.error(
+    "Storno-E-Mail Fehler:",
+    mailError
+  );
+}
     return json({
       success: true,
       message: "Reservierung wurde storniert.",
