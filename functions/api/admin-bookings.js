@@ -272,7 +272,7 @@ try {
   );
 }
     return json({
-      success: true,
+      success: true, customerEmailSent: emailResult.sent === true,
       message: "Reservierung wurde storniert.",
       booking: {
         ...booking,
