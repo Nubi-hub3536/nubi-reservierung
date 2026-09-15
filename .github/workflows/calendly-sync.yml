@@ -1,0 +1,17 @@
+name: Calendly sync
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+jobs:
+  calendly-sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Sync Calendly bookings
+        run: |
+          RESPONSE=$(curl --fail --silent --show-error "https://nubi-reservierung.pages.dev/api/calendly-sync")
+          echo "$RESPONSE"
+          echo "$RESPONSE" | grep -q '"success":true'
