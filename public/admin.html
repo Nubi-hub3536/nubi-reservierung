@@ -195,7 +195,21 @@
       Bitte zuerst ein Datum auswählen.
     </div>
   </div>
+<div class="card">
+  <h2>📋 Reservierungen</h2>
 
+  <div class="small-text">
+    Hier siehst du alle Reservierungen für den ausgewählten Tag.
+  </div>
+
+  <button class="primary" onclick="loadBookings()">
+    Reservierungen laden
+  </button>
+
+  <div id="bookingsMessage" class="message"></div>
+
+  <div id="bookingsList"></div>
+</div>
   <div class="card">
     <h2>🚪 Ganzen Tag schließen</h2>
 
@@ -593,6 +607,7 @@ function dateChanged() {
 
   loadDefaultRows();
   loadTimesForBlocking();
+  loadBookings();
 }
 
 function loadDefaultRows() {
@@ -1108,7 +1123,186 @@ document.addEventListener(
     dateChanged();
   }
 );
+function escHtml(value = "") {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
 
+async function loadBookings() {
+  const pin = getPin();
+  const date = getDate();
+
+  const message =
+    document.getElementById("bookingsMessage");
+
+  const list =
+    document.getElementById("bookingsList");
+
+  if (!pin) {
+    message.textContent =
+      "Bitte Admin-PIN eingeben.";
+    return;
+  }
+
+  if (!date) {
+    message.textContent =
+      "Bitte zuerst ein Datum auswählen.";
+    return;
+  }
+
+  message.textContent =
+    "Reservierungen werden geladen…";
+
+  list.innerHTML = "";
+
+  try {
+    const response = await fetch(
+      `/api/admin-bookings?pin=${encodeURIComponent(pin)}&date=${encodeURIComponent(date)}`
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      message.textContent =
+        data.error ||
+        "Reservierungen konnten nicht geladen werden.";
+      return;
+    }
+
+    if (!data.bookings || data.bookings.length === 0) {
+      message.textContent =
+        "Für diesen Tag gibt es keine Reservierungen.";
+      return;
+    }
+
+    message.textContent =
+      `${data.bookings.length} Reservierung(en) gefunden.`;
+
+    list.innerHTML = data.bookings
+      .map(booking => `
+        <div style="
+          margin-top:16px;
+          padding:16px;
+          border:1px solid #eee;
+          border-radius:14px;
+          background:#fffafb;
+        ">
+          <p>
+            <strong>Name:</strong>
+            ${escHtml(booking.name || "-")}<br>
+
+            <strong>E-Mail:</strong>
+            ${escHtml(booking.email || "-")}<br>
+
+            <strong>Telefon:</strong>
+            ${escHtml(booking.phone || "-")}<br>
+
+            <strong>Datum:</strong>
+            ${escHtml(booking.date || "-")}<br>
+
+            <strong>Uhrzeit:</strong>
+            ${escHtml(booking.time || "-")} Uhr<br>
+
+            <strong>Personen:</strong>
+            ${escHtml(booking.persons ?? "-")}<br>
+
+            <strong>Notiz:</strong>
+            ${escHtml(booking.note || "-")}<br>
+
+            <strong>Status:</strong>
+            ${escHtml(booking.status || "-")}<br>
+
+            <strong>Buchungs-ID:</strong>
+            ${escHtml(booking.id || "-")}<br><br>
+
+            <strong>Barzahlung bestätigt:</strong>
+            ${booking.cash_confirmed ? "Ja" : "Nein"}<br>
+
+            <strong>Telefon geprüft:</strong>
+            ${booking.phone_checked ? "Ja" : "Nein"}<br>
+
+            <strong>Sicherheit bestätigt:</strong>
+            ${booking.safety_confirmed ? "Ja" : "Nein"}
+          </p>
+
+          ${
+            booking.status !== "Storniert"
+              ? `
+                <button
+                  class="danger"
+                  onclick="cancelAdminBooking('${booking.id}', '${escHtml(booking.name || "")}')"
+                >
+                  Reservierung stornieren
+                </button>
+              `
+              : `
+                <div class="info">
+                  Diese Reservierung ist storniert.
+                </div>
+              `
+          }
+        </div>
+      `)
+      .join("");
+
+  } catch (error) {
+    message.textContent =
+      "Verbindung fehlgeschlagen.";
+  }
+}
+
+async function cancelAdminBooking(id, name) {
+  const pin = getPin();
+
+  if (!pin) {
+    alert("Bitte Admin-PIN eingeben.");
+    return;
+  }
+
+  const confirmed = confirm(
+    `Reservierung von ${name || "diesem Kunden"} wirklich stornieren?`
+  );
+
+  if (!confirmed) return;
+
+  try {
+    const response = await fetch(
+      "/api/admin-bookings",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          pin,
+          id
+        })
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      alert(
+        data.error ||
+        "Stornierung nicht möglich."
+      );
+      return;
+    }
+
+    alert("Reservierung wurde storniert.");
+
+    await loadBookings();
+    await loadTimesForBlocking();
+
+  } catch (error) {
+    alert("Verbindung fehlgeschlagen.");
+  }
+}
 </script>
 
 </body>
