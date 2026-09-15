@@ -14,7 +14,81 @@ function validPin(env, pin) {
     String(pin || "").trim() === String(env.ADMIN_PIN).trim()
   );
 }
+function esc(value = "") {   return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
 
+async function sendCancellationEmails(env, booking) {
+  if (!env.RESEND_API_KEY) {
+    return { sent: false };
+  }
+
+  const customerEmail =
+    String(booking.email || "").trim();
+
+  if (!customerEmail) {
+    return { sent: false };
+  }
+
+  const customerHtml = `
+    <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;line-height:1.6;color:#333">
+      <h2 style="color:#f38db6">Reservierung storniert</h2>
+
+      <p>Hallo ${esc(booking.name || "")},</p>
+
+      <p>
+        deine Reservierung bei <strong>Nubi Mainz</strong>
+        wurde storniert.
+      </p>
+
+      <p>
+        <strong>Datum:</strong> ${esc(booking.date || "-")}<br>
+        <strong>Uhrzeit:</strong> ${esc(booking.time || "-")} Uhr<br>
+        <strong>Personen:</strong> ${esc(booking.persons ?? "-")}
+      </p>
+
+      <p>Die reservierten Plätze wurden wieder freigegeben.</p>
+
+      <p>
+        Liebe Grüße<br>
+        <strong>Nubi Mainz</strong>
+      </p>
+    </div>
+  `;
+
+  const response = await fetch(
+    "https://api.resend.com/emails",
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${env.RESEND_API_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        from: "Nubi Mainz <reservierung@nubimainz.de>",
+        to: [customerEmail],
+        subject:
+          `Reservierung storniert – ${booking.date} ${booking.time}`,
+        html: customerHtml
+      })
+    }
+  );
+
+  if (!response.ok) {
+    console.error(
+      "Kunden-Storno-Mail fehlgeschlagen:",
+      await response.text()
+    );
+  }
+
+  return {
+    sent: response.ok
+  };
+}
 /*
   GET
   /api/admin-bookings?pin=DEINPIN&date=2026-10-01
