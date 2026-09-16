@@ -201,11 +201,12 @@ export async function onRequestPost(context) {
       }
       } else {
       const weekday = new Date(
-        `${date}T12:00:00`
-      ).toLocaleDateString("de-DE", {
-        weekday: "long",
-        timeZone: "Europe/Berlin"
-      
+  `${date}T12:00:00`
+).toLocaleDateString("de-DE", {
+  weekday: "long",
+  timeZone: "Europe/Berlin"
+});
+
 let allowedTimes =
   NORMAL_TIMES[weekday] || [];
 
