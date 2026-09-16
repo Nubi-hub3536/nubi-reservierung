@@ -1,4 +1,6 @@
 import { getRlpHoliday } from "../../lib/holidays.js";
+import { getShiftSummaryForDate } from "../../lib/calendar-shift.js";
+import { getNewBookingTimes } from "../../lib/work-schedule.js";
 import { usesNewBookingLogic } from "../../lib/booking-rules.js";
 const DEFAULT_CAPACITY = 8;
 const MAX_CAPACITY = 30;
@@ -203,11 +205,23 @@ export async function onRequestPost(context) {
       ).toLocaleDateString("de-DE", {
         weekday: "long",
         timeZone: "Europe/Berlin"
-      });
+      
+let allowedTimes =
+  NORMAL_TIMES[weekday] || [];
 
-      const standardAllowed =
-        (NORMAL_TIMES[weekday] || []).includes(time);
+if (useNewLogic) {
+  const shiftSummary =
+    await getShiftSummaryForDate(env, date);
 
+  allowedTimes =
+    getNewBookingTimes(
+      weekday,
+      shiftSummary
+    );
+}
+
+const standardAllowed =
+  allowedTimes.includes(time);
       // Alte Calendly-Sonderzeiten bleiben ebenfalls buchbar
       const legacySlot = await env.DB
         .prepare(`
