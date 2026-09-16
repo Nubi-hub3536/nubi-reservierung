@@ -1,5 +1,7 @@
 import { getRlpHoliday } from "../../lib/holidays.js";
 import { usesNewBookingLogic } from "../../lib/booking-rules.js";
+import { getShiftSummaryForDate } from "../../lib/calendar-shift.js";
+import { getNewBookingTimes } from "../../lib/work-schedule.js";
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
@@ -156,8 +158,19 @@ const useNewLogic = usesNewBookingLogic(date);
         timeZone: "Europe/Berlin"
       });
 
-      const standardTimes =
-        NORMAL_TIMES[weekday] || [];
+      let standardTimes =
+  NORMAL_TIMES[weekday] || [];
+
+if (useNewLogic) {
+  const shiftSummary =
+    await getShiftSummaryForDate(env, date);
+
+  standardTimes =
+    getNewBookingTimes(
+      weekday,
+      shiftSummary
+    );
+}
 
       // Bestehende Calendly-Sonderzeiten zusätzlich behalten
       const legacyResult = await env.DB
