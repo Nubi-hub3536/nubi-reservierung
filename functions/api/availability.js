@@ -1,5 +1,5 @@
 import { getRlpHoliday } from "../../lib/holidays.js";
-
+import { usesNewBookingLogic } from "../../lib/booking-rules.js";
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
@@ -39,7 +39,7 @@ export async function onRequestGet(context) {
     if (!date) {
       return json({ error: "Datum fehlt." }, 400);
     }
-
+const useNewLogic = usesNewBookingLogic(date);
     // Manuell komplett geschlossener Tag
     const closedDay = await env.DB
       .prepare(`
@@ -212,12 +212,13 @@ export async function onRequestGet(context) {
       .filter(slot => slot.remaining > 0);
 
     return json({
-      date,
-      times: slots,
-      closed: false,
-      holiday: Boolean(holiday),
-      holidayName: holiday?.name || null
-    });
+  date,
+  times: slots,
+  closed: false,
+  holiday: Boolean(holiday),
+  holidayName: holiday?.name || null,
+  newBookingLogic: useNewLogic
+});
 
   } catch (error) {
     console.error(error);
