@@ -1,5 +1,5 @@
 import { getRlpHoliday } from "../../lib/holidays.js";
-
+import { usesNewBookingLogic } from "../../lib/booking-rules.js";
 const DEFAULT_CAPACITY = 8;
 const MAX_CAPACITY = 30;
 
@@ -69,6 +69,7 @@ export async function onRequestPost(context) {
     const phone = String(body.phone || "").trim();
     const date = String(body.date || "").trim();
     const time = String(body.time || "").trim();
+    const useNewLogic = usesNewBookingLogic(date);
     const persons = Number(body.persons);
     const note = String(body.note || "").trim();
 
@@ -397,11 +398,12 @@ export async function onRequestPost(context) {
     ]);
 
     return json({
-      success: true,
-      id,
-      capacity,
-      remaining: remaining - persons
-    });
+  success: true,
+  id,
+  capacity,
+  remaining: remaining - persons,
+  newBookingLogic: useNewLogic
+});
 
   } catch (error) {
     console.error(error);
