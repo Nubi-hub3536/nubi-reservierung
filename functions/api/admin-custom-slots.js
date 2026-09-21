@@ -43,8 +43,7 @@ export async function onRequestPost(context) {
     // Neue Zeiten speichern
     for (const slot of slots) {
   const time = String(slot.time || "").trim();
-  const capacity = 8;
-
+  const capacity = Number(slot.capacity || 8);
   if (!/^\d{2}:\d{2}$/.test(time)) {
     return json(
       { error: "Uhrzeit ist ungültig." },
