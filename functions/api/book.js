@@ -1,5 +1,5 @@
 import { getRlpHoliday } from "../../lib/holidays.js";
-
+import { syncNubiCalendar } from "../../lib/nubi-calendar-sync.js";
 const DEFAULT_CAPACITY = 8;
 const MAX_CAPACITY = 30;
 
@@ -320,7 +320,14 @@ export async function onRequestPost(context) {
         safetyConfirmed ? 1 : 0
       )
       .run();
-
+await syncNubiCalendar(env, {
+  id,
+  name,
+  date,
+  time,
+  persons,
+  note
+}, "create");
     const cancelUrl =
       `https://nubi-reservierung.pages.dev/api/cancel?id=${encodeURIComponent(id)}`;
 
