@@ -1,3 +1,4 @@
+import { syncNubiCalendar } from "../../lib/nubi-calendar-sync.js";
 function html(content, status = 200) {
   return new Response(content, {
     status,
@@ -180,7 +181,7 @@ export async function onRequestPost(context) {
       `)
       .bind(bookingId)
       .run();
-
+await syncNubiCalendar(env, booking, "cancel");
     await sendOwnerMail(env, booking);
 
     return html(`
