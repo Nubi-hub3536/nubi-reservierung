@@ -1,3 +1,6 @@
+
+import { syncNubiCalendar } from "../../lib/nubi-calendar-sync.js";
+
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
@@ -14,7 +17,9 @@ function validPin(env, pin) {
     String(pin || "").trim() === String(env.ADMIN_PIN).trim()
   );
 }
-function esc(value = "") {   return String(value)
+
+function esc(value = "") {
+  return String(value)
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
@@ -27,9 +32,7 @@ async function sendCancellationEmails(env, booking) {
     return { sent: false };
   }
 
-  const customerEmail =
-    String(booking.email || "").trim();
-
+  const customerEmail = String(booking.email || "").trim();
   if (!customerEmail) {
     return { sent: false };
   }
@@ -60,23 +63,19 @@ async function sendCancellationEmails(env, booking) {
     </div>
   `;
 
-  const response = await fetch(
-    "https://api.resend.com/emails",
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${env.RESEND_API_KEY}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        from: "Nubi Mainz <reservierung@nubimainz.de>",
-        to: [customerEmail],
-        subject:
-          `Reservierung storniert – ${booking.date} ${booking.time}`,
-        html: customerHtml
-      })
-    }
-  );
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${env.RESEND_API_KEY}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      from: "Nubi Mainz <reservierung@nubimainz.de>",
+      to: [customerEmail],
+      subject: `Reservierung storniert – ${booking.date} ${booking.time}`,
+      html: customerHtml
+    })
+  });
 
   if (!response.ok) {
     console.error(
@@ -85,10 +84,9 @@ async function sendCancellationEmails(env, booking) {
     );
   }
 
-  return {
-    sent: response.ok
-  };
+  return { sent: response.ok };
 }
+
 /*
   GET
   /api/admin-bookings?pin=DEINPIN&date=2026-10-01
@@ -100,34 +98,19 @@ export async function onRequestGet(context) {
 
   try {
     if (!env.DB) {
-      return json(
-        { error: "Datenbank nicht verbunden." },
-        500
-      );
+      return json({ error: "Datenbank nicht verbunden." }, 500);
     }
 
     const url = new URL(request.url);
-
-    const pin = String(
-      url.searchParams.get("pin") || ""
-    ).trim();
-
-    const date = String(
-      url.searchParams.get("date") || ""
-    ).trim();
+    const pin = String(url.searchParams.get("pin") || "").trim();
+    const date = String(url.searchParams.get("date") || "").trim();
 
     if (!validPin(env, pin)) {
-      return json(
-        { error: "Falsche Admin-PIN." },
-        401
-      );
+      return json({ error: "Falsche Admin-PIN." }, 401);
     }
 
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-      return json(
-        { error: "Datum ist ungültig." },
-        400
-      );
+      return json({ error: "Datum ist ungültig." }, 400);
     }
 
     const result = await env.DB
@@ -160,17 +143,12 @@ export async function onRequestGet(context) {
       count: bookings.length,
       bookings
     });
-
   } catch (error) {
     console.error("Admin bookings GET:", error);
-
-    return json(
-      {
-        error: "Reservierungen konnten nicht geladen werden.",
-        details: error?.message || String(error)
-      },
-      500
-    );
+    return json({
+      error: "Reservierungen konnten nicht geladen werden.",
+      details: error?.message || String(error)
+    }, 500);
   }
 }
 
@@ -189,29 +167,19 @@ export async function onRequestPost(context) {
 
   try {
     if (!env.DB) {
-      return json(
-        { error: "Datenbank nicht verbunden." },
-        500
-      );
+      return json({ error: "Datenbank nicht verbunden." }, 500);
     }
 
     const body = await request.json();
-
     const pin = String(body.pin || "").trim();
     const id = String(body.id || "").trim();
 
     if (!validPin(env, pin)) {
-      return json(
-        { error: "Falsche Admin-PIN." },
-        401
-      );
+      return json({ error: "Falsche Admin-PIN." }, 401);
     }
 
     if (!id) {
-      return json(
-        { error: "Buchungs-ID fehlt." },
-        400
-      );
+      return json({ error: "Buchungs-ID fehlt." }, 400);
     }
 
     const booking = await env.DB
@@ -237,10 +205,7 @@ export async function onRequestPost(context) {
       .first();
 
     if (!booking) {
-      return json(
-        { error: "Reservierung nicht gefunden." },
-        404
-      );
+      return json({ error: "Reservierung nicht gefunden." }, 404);
     }
 
     if (booking.status === "Storniert") {
@@ -260,35 +225,42 @@ export async function onRequestPost(context) {
       `)
       .bind(id)
       .run();
-let emailResult = { sent: false };
 
-try {
-  emailResult =
-    await sendCancellationEmails(env, booking);
-} catch (mailError) {
-  console.error(
-    "Storno-E-Mail Fehler:",
-    mailError
-  );
-}
+    // Zusätzlich den eindeutig zugeordneten Nubi-Kalendereintrag entfernen.
+    // Ein Kalenderfehler darf die bereits gespeicherte Stornierung nicht aufheben.
+    let calendarSynced = false;
+    try {
+      calendarSynced = await syncNubiCalendar(env, booking, "cancel");
+      if (!calendarSynced) {
+        console.warn("Admin-Stornierung gespeichert, Google Kalender nicht synchronisiert.");
+      }
+    } catch (calendarError) {
+      console.error("Admin-Kalendersynchronisierung fehlgeschlagen:", calendarError);
+    }
+
+    // Bestehendes Verhalten der Kundenbenachrichtigung bleibt unverändert.
+    let emailResult = { sent: false };
+    try {
+      emailResult = await sendCancellationEmails(env, booking);
+    } catch (mailError) {
+      console.error("Storno-E-Mail Fehler:", mailError);
+    }
+
     return json({
-      success: true, customerEmailSent: emailResult.sent === true,
+      success: true,
+      calendarSynced,
+      customerEmailSent: emailResult.sent === true,
       message: "Reservierung wurde storniert.",
       booking: {
         ...booking,
         status: "Storniert"
       }
     });
-
   } catch (error) {
     console.error("Admin bookings POST:", error);
-
-    return json(
-      {
-        error: "Reservierung konnte nicht storniert werden.",
-        details: error?.message || String(error)
-      },
-      500
-    );
+    return json({
+      error: "Reservierung konnte nicht storniert werden.",
+      details: error?.message || String(error)
+    }, 500);
   }
 }
