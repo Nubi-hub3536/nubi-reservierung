@@ -353,6 +353,21 @@
 
 <script>
   const dateInput = document.getElementById("date");
+  function aktualisiereMindestdatum() {
+  const teile = Object.fromEntries(
+    new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Europe/Berlin",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit"
+    }).formatToParts(new Date()).map(p => [p.type, p.value])
+  );
+
+  dateInput.min = `${teile.year}-${teile.month}-${teile.day}`;
+}
+
+aktualisiereMindestdatum();
+dateInput.addEventListener("focus", aktualisiereMindestdatum);
   const timeInput = document.getElementById("time");
   const peopleSelect = document.getElementById("people");
   const slotsElement = document.getElementById("slots");
