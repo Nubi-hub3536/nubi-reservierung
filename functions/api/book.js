@@ -115,7 +115,31 @@ export async function onRequestPost(context) {
         400
       );
     }
+// Vergangene Termine sperren – nach Mainzer Ortszeit
+const jetzt = Object.fromEntries(
+  new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/Berlin",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23"
+  }).formatToParts(new Date()).map(p => [p.type, p.value])
+);
 
+const heute = `${jetzt.year}-${jetzt.month}-${jetzt.day}`;
+const aktuelleUhrzeit = `${jetzt.hour}:${jetzt.minute}`;
+
+if (
+  date < heute ||
+  (date === heute && time <= aktuelleUhrzeit)
+) {
+  return json(
+    { error: "Dieser Termin liegt in der Vergangenheit. Bitte wähle einen zukünftigen Termin." },
+    400
+  );
+}
     // Manuell komplett geschlossener Tag
     const closedDay = await env.DB
       .prepare(`
