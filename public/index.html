@@ -164,6 +164,13 @@
       cursor: not-allowed;
     }
 
+    .slot-note {
+      margin: 10px 0 0;
+      color: #574566;
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
     .check {
       display: flex;
       gap: 11px;
@@ -260,9 +267,8 @@
 <div class="container">
 
   <div class="brand">
-  <img src="nubi-logo.png" alt="Nubi Mainz" style="display:block;width:220px;max-width:80%;height:auto;margin:0 auto 10px;">
-  <div class="tagline">Make it cute ✨</div>
-</div>
+    <img src="nubi-logo.png" alt="Nubi Mainz" style="display:block;width:220px;max-width:80%;height:auto;margin:0 auto 10px;">
+    <div class="tagline">Make it cute ✨</div>
   </div>
 
   <div class="card">
@@ -283,6 +289,9 @@
       <div id="slots" class="slots">
         Bitte zuerst ein Datum auswählen.
       </div>
+      <p id="lateSlotNote" class="slot-note" hidden>
+        Beim Termin um 18:30 Uhr kannst du bis 20:00 Uhr gestalten, auch wenn der Laden regulär um 19:00 Uhr schließt.
+      </p>
 
       <input id="time" type="hidden">
 
@@ -330,7 +339,7 @@
         <label for="safety">
           Ich habe die
           <a href="https://www.nubimainz.de/allgemeine-sicherheitshinweise" target="_blank">
-            Sicherheits- & Materialhinweise
+            Sicherheits- &amp; Materialhinweise
           </a>
           gelesen und zur Kenntnis genommen.
         </label>
@@ -353,24 +362,27 @@
 
 <script>
   const dateInput = document.getElementById("date");
+
   function aktualisiereMindestdatum() {
-  const teile = Object.fromEntries(
-    new Intl.DateTimeFormat("en-GB", {
-      timeZone: "Europe/Berlin",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit"
-    }).formatToParts(new Date()).map(p => [p.type, p.value])
-  );
+    const teile = Object.fromEntries(
+      new Intl.DateTimeFormat("en-GB", {
+        timeZone: "Europe/Berlin",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit"
+      }).formatToParts(new Date()).map(p => [p.type, p.value])
+    );
 
-  dateInput.min = `${teile.year}-${teile.month}-${teile.day}`;
-}
+    dateInput.min = `${teile.year}-${teile.month}-${teile.day}`;
+  }
 
-aktualisiereMindestdatum();
-dateInput.addEventListener("focus", aktualisiereMindestdatum);
+  aktualisiereMindestdatum();
+  dateInput.addEventListener("focus", aktualisiereMindestdatum);
+
   const timeInput = document.getElementById("time");
   const peopleSelect = document.getElementById("people");
   const slotsElement = document.getElementById("slots");
+  const lateSlotNote = document.getElementById("lateSlotNote");
   const form = document.getElementById("bookingForm");
   const message = document.getElementById("message");
   const submitButton = document.getElementById("submitButton");
@@ -387,6 +399,7 @@ dateInput.addEventListener("focus", aktualisiereMindestdatum);
 
   async function loadAvailability() {
     clearMessage();
+    lateSlotNote.hidden = true;
 
     const date = dateInput.value;
 
@@ -416,6 +429,8 @@ dateInput.addEventListener("focus", aktualisiereMindestdatum);
 
       data.times.forEach(slot => {
         const button = document.createElement("button");
+        const isLateSlot = slot.time === "18:30";
+        const displayTime = isLateSlot ? "18:30–20:00" : slot.time;
 
         button.type = "button";
         button.className = "slot";
@@ -423,8 +438,13 @@ dateInput.addEventListener("focus", aktualisiereMindestdatum);
         button.dataset.remaining = slot.remaining;
 
         button.innerHTML =
-          `<strong>${slot.time} Uhr</strong><br>
+          `<strong>${displayTime} Uhr</strong><br>
            <small>${slot.remaining} von ${slot.capacity} Plätzen frei</small>`;
+
+        if (isLateSlot) {
+          lateSlotNote.hidden = false;
+          button.setAttribute("aria-describedby", lateSlotNote.id);
+        }
 
         if (!slot.available) {
           button.disabled = true;
