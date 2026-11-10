@@ -44,10 +44,7 @@ async function sendEmail(env, to, subject, html) {
   });
 
   if (!response.ok) {
-    console.error(
-      "E-Mail-Fehler:",
-      await response.text()
-    );
+    console.error("E-Mail-Fehler:", await response.text());
   }
 }
 
@@ -94,52 +91,43 @@ export async function onRequestPost(context) {
       persons > MAX_CAPACITY
     ) {
       return json(
-        {
-          error:
-            "Bitte alle Pflichtfelder korrekt ausfüllen."
-        },
+        { error: "Bitte alle Pflichtfelder korrekt ausfüllen." },
         400
       );
     }
 
-    if (
-      !cashConfirmed ||
-      !phoneChecked ||
-      !safetyConfirmed
-    ) {
+    if (!cashConfirmed || !phoneChecked || !safetyConfirmed) {
+      return json(
+        { error: "Bitte alle Pflichtbestätigungen akzeptieren." },
+        400
+      );
+    }
+
+    // Vergangene Termine sperren – nach Mainzer Ortszeit
+    const jetzt = Object.fromEntries(
+      new Intl.DateTimeFormat("en-GB", {
+        timeZone: "Europe/Berlin",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        hourCycle: "h23"
+      }).formatToParts(new Date()).map(p => [p.type, p.value])
+    );
+
+    const heute = `${jetzt.year}-${jetzt.month}-${jetzt.day}`;
+    const aktuelleUhrzeit = `${jetzt.hour}:${jetzt.minute}`;
+
+    if (date < heute || (date === heute && time <= aktuelleUhrzeit)) {
       return json(
         {
-          error:
-            "Bitte alle Pflichtbestätigungen akzeptieren."
+          error: "Dieser Termin liegt in der Vergangenheit. Bitte wähle einen zukünftigen Termin."
         },
         400
       );
     }
-// Vergangene Termine sperren – nach Mainzer Ortszeit
-const jetzt = Object.fromEntries(
-  new Intl.DateTimeFormat("en-GB", {
-    timeZone: "Europe/Berlin",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hourCycle: "h23"
-  }).formatToParts(new Date()).map(p => [p.type, p.value])
-);
 
-const heute = `${jetzt.year}-${jetzt.month}-${jetzt.day}`;
-const aktuelleUhrzeit = `${jetzt.hour}:${jetzt.minute}`;
-
-if (
-  date < heute ||
-  (date === heute && time <= aktuelleUhrzeit)
-) {
-  return json(
-    { error: "Dieser Termin liegt in der Vergangenheit. Bitte wähle einen zukünftigen Termin." },
-    400
-  );
-}
     // Manuell komplett geschlossener Tag
     const closedDay = await env.DB
       .prepare(`
@@ -153,10 +141,7 @@ if (
 
     if (closedDay) {
       return json(
-        {
-          error:
-            "An diesem Tag sind keine Reservierungen möglich."
-        },
+        { error: "An diesem Tag sind keine Reservierungen möglich." },
         409
       );
     }
@@ -174,23 +159,18 @@ if (
       .bind(date)
       .first();
 
-    const hasCustomSlots =
-      Number(customDay?.total || 0) > 0;
+    const hasCustomSlots = Number(customDay?.total || 0) > 0;
 
     /*
-      Feiertage in Rheinland-Pfalz sind
-      standardmäßig geschlossen.
-
-      Eigene Admin-Zeiten öffnen den Feiertag
-      ausdrücklich wieder.
+      Feiertage in Rheinland-Pfalz sind standardmäßig geschlossen.
+      Eigene Admin-Zeiten öffnen den Feiertag ausdrücklich wieder.
     */
     const holiday = getRlpHoliday(date);
 
     if (holiday && !hasCustomSlots) {
       return json(
         {
-          error:
-            `Am Feiertag „${holiday.name}“ sind keine Reservierungen möglich.`,
+          error: `Am Feiertag „${holiday.name}“ sind keine Reservierungen möglich.`,
           holiday: true,
           holidayName: holiday.name
         },
@@ -210,26 +190,20 @@ if (
         .bind(date, time)
         .first();
 
-      if (
-        customSlot &&
-        Number(customSlot.is_closed || 0) === 0
-      ) {
+      if (customSlot && Number(customSlot.is_closed || 0) === 0) {
         slotAllowed = true;
-
-        capacity = Number(
-          customSlot.capacity || DEFAULT_CAPACITY
-        );
+        capacity = Number(customSlot.capacity || DEFAULT_CAPACITY);
       }
-      } else {
-      const weekday = new Date(
-        `${date}T12:00:00`
-      ).toLocaleDateString("de-DE", {
-        weekday: "long",
-        timeZone: "Europe/Berlin"
-      });
+    } else {
+      const weekday = new Date(`${date}T12:00:00`).toLocaleDateString(
+        "de-DE",
+        {
+          weekday: "long",
+          timeZone: "Europe/Berlin"
+        }
+      );
 
-      const standardAllowed =
-        (NORMAL_TIMES[weekday] || []).includes(time);
+      const standardAllowed = (NORMAL_TIMES[weekday] || []).includes(time);
 
       // Alte Calendly-Sonderzeiten bleiben ebenfalls buchbar
       const legacySlot = await env.DB
@@ -243,21 +217,17 @@ if (
         .bind(date, time)
         .first();
 
-      const legacyAllowed =
-        Number(legacySlot?.total || 0) > 0;
+      const legacyAllowed = Number(legacySlot?.total || 0) > 0;
 
       if (standardAllowed || legacyAllowed) {
         slotAllowed = true;
         capacity = DEFAULT_CAPACITY;
       }
-    }  
+    }
 
     if (!slotAllowed) {
       return json(
-        {
-          error:
-            "Diese Uhrzeit ist an diesem Tag nicht verfügbar."
-        },
+        { error: "Diese Uhrzeit ist an diesem Tag nicht verfügbar." },
         409
       );
     }
@@ -274,8 +244,7 @@ if (
       .bind(date, time)
       .first();
 
-    const blocked =
-      Number(blockedResult?.blocked || 0);
+    const blocked = Number(blockedResult?.blocked || 0);
 
     // Bereits reservierte Plätze
     const bookingResult = await env.DB
@@ -290,13 +259,8 @@ if (
       .bind(date, time)
       .first();
 
-    const booked =
-      Number(bookingResult?.booked || 0);
-
-    const remaining = Math.max(
-      0,
-      capacity - blocked - booked
-    );
+    const booked = Number(bookingResult?.booked || 0);
+    const remaining = Math.max(0, capacity - blocked - booked);
 
     if (persons > remaining) {
       return json(
@@ -344,16 +308,19 @@ if (
         safetyConfirmed ? 1 : 0
       )
       .run();
-await syncNubiCalendar(env, {
-  id,
-  name,
-  date,
-  time,
-  persons,
-  note
-}, "create");
+
+    await syncNubiCalendar(env, {
+      id,
+      name,
+      date,
+      time,
+      persons,
+      note
+    }, "create");
+
     const cancelUrl =
       `https://nubi-reservierung.pages.dev/api/cancel?id=${encodeURIComponent(id)}`;
+    const customerTime = time === "18:30" ? "18:30–20:00" : time;
 
     const customerHtml = `
       <h2>Deine Reservierung bei Nubi Mainz 💕</h2>
@@ -366,7 +333,7 @@ await syncNubiCalendar(env, {
 
       <p>
         <strong>Datum:</strong> ${date}<br>
-        <strong>Uhrzeit:</strong> ${time} Uhr<br>
+        <strong>Uhrzeit:</strong> ${customerTime} Uhr<br>
         <strong>Personen:</strong> ${persons}
       </p>
 
@@ -385,10 +352,10 @@ await syncNubiCalendar(env, {
           Reservierung stornieren
         </a>
       </p>
-<p>
-  <strong>Hinweis zum Datenschutz:</strong><br>
-  Deine Reservierungsdaten werden ausschließlich zur Durchführung deiner Reservierung verwendet und 7 Tage nach deinem Termin automatisch gelöscht.
-</p>
+      <p>
+        <strong>Hinweis zum Datenschutz:</strong><br>
+        Deine Reservierungsdaten werden ausschließlich zur Durchführung deiner Reservierung verwendet und 7 Tage nach deinem Termin automatisch gelöscht.
+      </p>
       <p>
         Wir freuen uns auf dich! 💕<br>
         Nubi Mainz
@@ -433,14 +400,12 @@ await syncNubiCalendar(env, {
       capacity,
       remaining: remaining - persons
     });
-
   } catch (error) {
     console.error(error);
 
     return json(
       {
-        error:
-          "Reservierung konnte nicht gespeichert werden.",
+        error: "Reservierung konnte nicht gespeichert werden.",
         details: error?.message || String(error)
       },
       500
