@@ -317,9 +317,6 @@
       <label for="phone">Telefonnummer *</label>
       <input id="phone" type="tel" required>
 
-      <label for="note">Notiz</label>
-      <textarea id="note"></textarea>
-
       <div class="check">
         <input id="cash" type="checkbox" required>
         <label for="cash">
@@ -540,7 +537,7 @@
       name: document.getElementById("name").value.trim(),
       email: document.getElementById("email").value.trim(),
       phone: document.getElementById("phone").value.trim(),
-      note: document.getElementById("note").value.trim(),
+      note: "",
 
       cashConfirmed:
         document.getElementById("cash").checked,
