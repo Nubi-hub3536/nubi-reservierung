@@ -388,8 +388,32 @@
   const submitButton = document.getElementById("submitButton");
 
   function showMessage(text, type) {
-    message.textContent = text;
-    message.className = type;
+  message.textContent = text;
+  message.className = type;
+
+  if (type === "success") {
+    const box = document.createElement("div");
+    box.style.cssText = `
+      margin-top: 14px;
+      padding: 16px;
+      border: 1px solid #efbed4;
+      border-radius: 14px;
+      background: #fff0f6;
+      color: #833b60;
+      font-weight: 400;
+      line-height: 1.5;
+    `;
+
+    const title = document.createElement("strong");
+    title.textContent = "💌 Bestätigungs-E-Mail";
+
+    const hint = document.createElement("div");
+    hint.textContent =
+      "Bitte schau auch in deinem Spam-Ordner nach deiner Bestätigungs-E-Mail.";
+
+    box.append(title, hint);
+    message.appendChild(box);
+  }
   }
 
   function clearMessage() {
